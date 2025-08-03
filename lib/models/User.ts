@@ -61,8 +61,7 @@ const UserSchema = new mongoose.Schema<IUser>({
   timestamps: true
 });
 
-// インデックス作成
-UserSchema.index({ email: 1 });
+// インデックス作成（emailは unique: true で既に作成されるため除外）
 UserSchema.index({ role: 1 });
 UserSchema.index({ teamId: 1 });
 
