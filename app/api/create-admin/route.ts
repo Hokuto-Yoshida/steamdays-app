@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     await dbConnect();
 

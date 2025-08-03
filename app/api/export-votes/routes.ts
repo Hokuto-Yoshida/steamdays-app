@@ -24,11 +24,18 @@ export async function GET(request: NextRequest) {
     // CSV形式のデータを生成
     const csvHeader = 'チーム名,プロジェクトタイトル,ハート数,コメント数,メンバー,使用技術,ScratchURL,コメント詳細\n';
     
+    // コメント型定義
+    interface Comment {
+      author?: string;
+      reason: string;
+      timestamp: Date;
+    }
+    
     const csvRows = teams.map((team, index) => {
       const rank = index + 1;
       const members = team.members.join('; ');
       const technologies = team.technologies.join('; ');
-      const commentsDetail = team.comments.map((comment: any) => 
+      const commentsDetail = team.comments.map((comment: Comment) => 
         `${comment.author || '匿名'}: ${comment.reason} (${new Date(comment.timestamp).toLocaleString('ja-JP')})`
       ).join(' | ');
       

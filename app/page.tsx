@@ -163,23 +163,6 @@ export default function Home() {
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📝</div>
             <h3 className="text-xl font-semibold text-gray-800 mb-2">チームがまだ登録されていません</h3>
-            <p className="text-gray-600 mb-6">初期データをセットアップしてください。</p>
-            <button
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/setup', { method: 'POST' });
-                  const result = await response.json();
-                  if (result.success) {
-                    window.location.reload();
-                  }
-                } catch (err) {
-                  console.error('Setup error:', err);
-                }
-              }}
-              className="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600"
-            >
-              🔧 初期データをセットアップ
-            </button>
           </div>
         )}
 

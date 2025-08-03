@@ -229,17 +229,17 @@ export default function Ranking() {
 
                 {/* 最新コメント（上位3位まで表示） */}
                 {rank <= 3 && team.comments.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-4 pt-4 border-t border-gray-200">
                     <h4 className="font-medium text-gray-700 mb-2">💬 最新のコメント</h4>
                     <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-sm text-gray-600 italic">
-                        "{team.comments[team.comments.length - 1].reason}"
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-sm text-gray-600 italic">
+                        &quot;{team.comments[team.comments.length - 1].reason}&quot;
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
                         {new Date(team.comments[team.comments.length - 1].timestamp).toLocaleDateString('ja-JP')}
-                      </p>
+                    </p>
                     </div>
-                  </div>
+                </div>
                 )}
               </div>
             );

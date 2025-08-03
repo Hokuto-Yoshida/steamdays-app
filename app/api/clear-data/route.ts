@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { clearType } = body;
 
-    let result = { message: '', details: {} };
+    const result = { message: '', details: {} as Record<string, number> };
 
     switch (clearType) {
       case 'teams':

@@ -305,21 +305,21 @@ export default function TeamDetail() {
 
             {/* 最近のコメント */}
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">💬 最近のコメント</h3>
-              <div className="space-y-3">
-                {team.comments.length > 0 ? (
-                  team.comments.slice(-3).map((comment, index) => (
-                    <div key={index} className="border-l-4 border-blue-200 pl-3">
-                      <p className="text-sm text-gray-600">"{comment.reason}"</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {comment.author} • {new Date(comment.timestamp).toLocaleDateString('ja-JP')}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 text-sm">まだコメントがありません</p>
-                )}
-              </div>
+                <h3 className="text-lg font-semibold mb-4">💬 最近のコメント</h3>
+                <div className="space-y-3">
+                    {team.comments.length > 0 ? (
+                    team.comments.slice(-3).map((comment, index) => (
+                        <div key={index} className="border-l-4 border-blue-200 pl-3">
+                        <p className="text-sm text-gray-600">&quot;{comment.reason}&quot;</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                            {comment.author} • {new Date(comment.timestamp).toLocaleDateString('ja-JP')}
+                        </p>
+                        </div>
+                    ))
+                    ) : (
+                    <p className="text-gray-500 text-sm">まだコメントがありません</p>
+                    )}
+                </div>
             </div>
           </div>
         </div>

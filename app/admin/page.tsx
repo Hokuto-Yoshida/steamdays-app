@@ -44,46 +44,53 @@ export default function Admin() {
   const [refreshing, setRefreshing] = useState(false);
 
   // 統計データの取得
-  const fetchStats = async () => {
+    const fetchStats = async () => {
     setRefreshing(true);
     try {
-      // チームデータ取得
-      const teamsResponse = await fetch('/api/teams');
-      if (teamsResponse.ok) {
+        // チームデータ取得
+        const teamsResponse = await fetch('/api/teams');
+        if (teamsResponse.ok) {
         const teamsResult = await teamsResponse.json();
         if (teamsResult.success && teamsResult.data) {
-          const teamsData = teamsResult.data;
-          setTeams(teamsData);
-          
-          const totalVotes = teamsData.reduce((sum: number, team: any) => sum + team.hearts, 0);
-          const totalComments = teamsData.reduce((sum: number, team: any) => sum + (team.comments?.length || 0), 0);
-          const topTeam = teamsData.reduce((prev: any, current: any) => 
+            const teamsData = teamsResult.data;
+            setTeams(teamsData);
+            
+            // 型定義を追加
+            interface TeamData {
+            hearts: number;
+            comments?: any[];
+            name: string;
+            }
+            
+            const totalVotes = teamsData.reduce((sum: number, team: TeamData) => sum + team.hearts, 0);
+            const totalComments = teamsData.reduce((sum: number, team: TeamData) => sum + (team.comments?.length || 0), 0);
+            const topTeam = teamsData.reduce((prev: TeamData, current: TeamData) => 
             (prev.hearts > current.hearts) ? prev : current, teamsData[0]);
 
-          setStats({
+            setStats({
             totalTeams: teamsData.length,
             totalVotes: totalVotes,
             totalComments: totalComments,
             topTeam: topTeam ? { name: topTeam.name, hearts: topTeam.hearts } : null,
             activeUsers: users.filter(u => u.isActive).length
-          });
+            });
         }
-      }
+        }
 
-      // ユーザーデータ取得
-      const usersResponse = await fetch('/api/debug-users');
-      if (usersResponse.ok) {
+        // ユーザーデータ取得
+        const usersResponse = await fetch('/api/debug-users');
+        if (usersResponse.ok) {
         const usersResult = await usersResponse.json();
         if (usersResult.success && usersResult.data) {
-          setUsers(usersResult.data);
+            setUsers(usersResult.data);
         }
-      }
+        }
     } catch (error) {
-      console.error('Stats fetch error:', error);
+        console.error('Stats fetch error:', error);
     } finally {
-      setRefreshing(false);
+        setRefreshing(false);
     }
-  };
+    };
 
   useEffect(() => {
     fetchStats();
@@ -420,7 +427,6 @@ export default function Admin() {
             </div>
           </div>
         </div>
-
         {/* フッター */}
         <div className="text-center text-gray-500 text-sm">
           <p>STEAM DAYS 2025 - 運営管理システム</p>
