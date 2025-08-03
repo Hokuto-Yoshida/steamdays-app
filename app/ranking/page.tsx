@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 
@@ -21,51 +21,41 @@ export default function Ranking() {
   const [sortBy, setSortBy] = useState<'hearts' | 'comments'>('hearts');
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  // データを取得
-  useEffect(() => {
-    async function fetchTeams() {
-      try {
-        const response = await fetch('/api/teams');
-        const result = await response.json();
-        
-        if (result.success) {
-          const sortedTeams = [...result.data].sort((a, b) => {
-            if (sortBy === 'hearts') {
-              return b.hearts - a.hearts;
-            } else {
-              return b.comments.length - a.comments.length;
-            }
-          });
-          setTeams(sortedTeams);
-          setLastUpdate(new Date());
-        }
-      } catch (error) {
-        console.error('Fetch error:', error);
-      } finally {
-        setLoading(false);
+  // データを取得する関数をuseCallbackでメモ化
+  const fetchTeams = useCallback(async () => {
+    try {
+      const response = await fetch('/api/teams');
+      const result = await response.json();
+      
+      if (result.success) {
+        const sortedTeams = [...result.data].sort((a, b) => {
+          if (sortBy === 'hearts') {
+            return b.hearts - a.hearts;
+          } else {
+            return b.comments.length - a.comments.length;
+          }
+        });
+        setTeams(sortedTeams);
+        setLastUpdate(new Date());
       }
+    } catch (error) {
+      console.error('Fetch error:', error);
+    } finally {
+      setLoading(false);
     }
+  }, [sortBy]); // sortByが変更されたときのみ再作成
 
+  // 初期データ取得と定期更新
+  useEffect(() => {
     fetchTeams();
     
     // 30秒ごとに自動更新
     const interval = setInterval(fetchTeams, 30000);
     return () => clearInterval(interval);
-  }, [sortBy]);
+  }, [fetchTeams]); // fetchTeamsを依存関係に追加
 
-  // ソート変更時の処理
-  useEffect(() => {
-    if (teams.length > 0) {
-      const sortedTeams = [...teams].sort((a, b) => {
-        if (sortBy === 'hearts') {
-          return b.hearts - a.hearts;
-        } else {
-          return b.comments.length - a.comments.length;
-        }
-      });
-      setTeams(sortedTeams);
-    }
-  }, [sortBy]);
+  // ソート変更時の処理（不要なuseEffectを削除）
+  // teams配列のソートはfetchTeams内で行うため、このuseEffectは削除
 
   const getTotalVotes = () => {
     return teams.reduce((total, team) => total + team.hearts, 0);
@@ -93,6 +83,25 @@ export default function Ranking() {
     }
   };
 
+  // ローディング状態の表示
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        <Navbar 
+          title="🏆 オーディエンス賞ランキング"
+          showBackButton={true}
+          backUrl="/"
+        />
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">ランキングを読み込み中...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
       {/* ナビゲーションバー */}
@@ -119,31 +128,36 @@ export default function Ranking() {
           </div>
         </div>
 
-        {/* ソート切り替え */}
+        {/* 最終更新時刻 */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="flex items-center gap-4">
-            <span className="font-medium text-gray-700">並び替え:</span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSortBy('hearts')}
-                className={`px-4 py-2 rounded-md transition-colors ${
-                  sortBy === 'hearts'
-                    ? 'bg-red-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                ❤️ ハート数順
-              </button>
-              <button
-                onClick={() => setSortBy('comments')}
-                className={`px-4 py-2 rounded-md transition-colors ${
-                  sortBy === 'comments'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                💬 コメント数順
-              </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="font-medium text-gray-700">並び替え:</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSortBy('hearts')}
+                  className={`px-4 py-2 rounded-md transition-colors ${
+                    sortBy === 'hearts'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  ❤️ ハート数順
+                </button>
+                <button
+                  onClick={() => setSortBy('comments')}
+                  className={`px-4 py-2 rounded-md transition-colors ${
+                    sortBy === 'comments'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  💬 コメント数順
+                </button>
+              </div>
+            </div>
+            <div className="text-sm text-gray-500">
+              最終更新: {lastUpdate.toLocaleTimeString('ja-JP')}
             </div>
           </div>
         </div>

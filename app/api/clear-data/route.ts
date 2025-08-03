@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth'; // インポート先を変更
 import dbConnect from '@/lib/mongodb';
 import { Team, Vote } from '@/lib/models/Team';
 import { User } from '@/lib/models/User';
