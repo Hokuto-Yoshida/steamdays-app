@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { generateClientId, hasVotedForTeam, markTeamAsVoted } from '@/lib/utils/client';
 import Navbar from '@/components/Navbar';
 
@@ -27,10 +27,9 @@ interface Team {
   comments: Comment[];
 }
 
-export default function TeamDetail() {
-  const params = useParams();
+export default function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const teamId = params.id as string;
+  const [teamId, setTeamId] = useState<string>('');
   
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,8 +39,19 @@ export default function TeamDetail() {
   const [voting, setVoting] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
 
+  // paramsを解決してteamIdを設定
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolvedParams = await params;
+      setTeamId(resolvedParams.id);
+    };
+    resolveParams();
+  }, [params]);
+
   // チームデータを取得
   useEffect(() => {
+    if (!teamId) return;
+
     async function fetchTeam() {
       try {
         const response = await fetch(`/api/teams/${teamId}`);
@@ -65,7 +75,7 @@ export default function TeamDetail() {
 
   // 投票処理
   const handleVote = async () => {
-    if (!team || voting || hasVoted) return;
+    if (!team || voting || hasVoted || !teamId) return;
 
     setVoting(true);
     try {
@@ -112,7 +122,7 @@ export default function TeamDetail() {
     }
   };
 
-  if (loading) {
+  if (loading || !teamId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">

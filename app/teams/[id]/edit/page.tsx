@@ -16,7 +16,7 @@ interface Team {
   scratchUrl: string;
 }
 
-export default function TeamEditPage({ params }: { params: { id: string } }) {
+export default function TeamEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [team, setTeam] = useState<Team | null>(null);
@@ -25,17 +25,29 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState('');
   const [memberInput, setMemberInput] = useState('');
   const [technologyInput, setTechnologyInput] = useState('');
+  const [teamId, setTeamId] = useState<string>('');
+
+  // paramsを解決してteamIdを設定
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolvedParams = await params;
+      setTeamId(resolvedParams.id);
+    };
+    resolveParams();
+  }, [params]);
 
   // 権限チェック
   const canEdit = useCallback(() => {
-    if (!session?.user) return false;
+    if (!session?.user || !teamId) return false;
     return session.user.role === 'admin' || 
-           (session.user.role === 'presenter' && session.user.teamId === params.id);
-  }, [session, params.id]);
+           (session.user.role === 'presenter' && session.user.teamId === teamId);
+  }, [session, teamId]);
 
   const fetchTeam = useCallback(async () => {
+    if (!teamId) return;
+    
     try {
-      const response = await fetch(`/api/teams/${params.id}`);
+      const response = await fetch(`/api/teams/${teamId}`);
       if (!response.ok) throw new Error('チーム情報の取得に失敗しました');
       
       const result = await response.json();
@@ -50,10 +62,10 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, [teamId]);
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (status === 'loading' || !teamId) return;
     
     if (!session) {
       router.push('/auth/login');
@@ -66,17 +78,17 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
     }
 
     fetchTeam();
-  }, [session, status, params.id, canEdit, fetchTeam, router]);
+  }, [session, status, teamId, canEdit, fetchTeam, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!team || !canEdit()) return;
+    if (!team || !canEdit() || !teamId) return;
 
     setSaving(true);
     setError('');
 
     try {
-      const response = await fetch(`/api/teams/${params.id}`, {
+      const response = await fetch(`/api/teams/${teamId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +102,7 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
         throw new Error(result.error || '保存に失敗しました');
       }
 
-      router.push(`/teams/${params.id}`);
+      router.push(`/teams/${teamId}`);
     } catch (error) {
       console.error('Save error:', error);
       setError('保存に失敗しました。もう一度お試しください。');
@@ -137,7 +149,7 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
     }
   };
 
-  if (loading) {
+  if (loading || !teamId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="container mx-auto px-4 py-8">
@@ -351,7 +363,7 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
           <div className="flex gap-4 justify-end">
             <button
               type="button"
-              onClick={() => router.push(`/teams/${params.id}`)}
+              onClick={() => router.push(`/teams/${teamId}`)}
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
             >
               キャンセル
