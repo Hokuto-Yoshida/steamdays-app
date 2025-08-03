@@ -32,13 +32,16 @@ function getClientIP(request: NextRequest): string {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // paramsを非同期で取得
+    const params = await context.params;
+    const { id: teamId } = params;
+    
     await dbConnect();
     
     const { reason, clientId } = await request.json();
-    const teamId = params.id;
     const ipAddress = getClientIP(request);
     
     // IPアドレスまたはクライアントIDで重複チェック

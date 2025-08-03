@@ -4,14 +4,16 @@ import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import { Team } from '@/lib/models/Team';
 
-// 既存のGETメソッド（そのまま維持）
+// GET メソッド - Next.js 15対応
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
+    
     await dbConnect();
-    const team = await Team.findOne({ id: params.id });
+    const team = await Team.findOne({ id });
     
     if (!team) {
       return NextResponse.json(
@@ -33,12 +35,14 @@ export async function GET(
   }
 }
 
-// チーム情報更新のためのPUTメソッドを追加
+// PUT メソッド - Next.js 15対応
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
+    
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
@@ -50,7 +54,7 @@ export async function PUT(
 
     // 権限チェック: 管理者または該当チームの発表者のみ
     const canEdit = session.user.role === 'admin' || 
-                   (session.user.role === 'presenter' && session.user.teamId === params.id);
+                   (session.user.role === 'presenter' && session.user.teamId === id);
     
     if (!canEdit) {
       return NextResponse.json(
@@ -85,7 +89,7 @@ export async function PUT(
     }
 
     const updatedTeam = await Team.findOneAndUpdate(
-      { id: params.id },
+      { id },
       updateData,
       { new: true, runValidators: true }
     );
@@ -111,5 +115,3 @@ export async function PUT(
     );
   }
 }
-
-// 既存の投票機能（/vote エンドポイント）も必要に応じて保持

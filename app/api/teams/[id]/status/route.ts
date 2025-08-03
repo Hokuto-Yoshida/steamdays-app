@@ -6,9 +6,13 @@ import { Team } from '@/lib/models/Team';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // paramsを非同期で取得
+    const params = await context.params;
+    const { id } = params;
+    
     const session = await getServerSession(authOptions);
     
     // 管理者権限チェック
@@ -34,7 +38,7 @@ export async function PUT(
     }
 
     const updatedTeam = await Team.findOneAndUpdate(
-      { id: params.id },
+      { id: id },
       { 
         status: status,
         updatedAt: new Date()
