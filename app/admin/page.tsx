@@ -44,53 +44,59 @@ export default function Admin() {
   const [refreshing, setRefreshing] = useState(false);
 
   // 統計データの取得
-    const fetchStats = async () => {
+  const fetchStats = async () => {
     setRefreshing(true);
     try {
-        // チームデータ取得
-        const teamsResponse = await fetch('/api/teams');
-        if (teamsResponse.ok) {
+      // チームデータ取得
+      const teamsResponse = await fetch('/api/teams');
+      if (teamsResponse.ok) {
         const teamsResult = await teamsResponse.json();
         if (teamsResult.success && teamsResult.data) {
-            const teamsData = teamsResult.data;
-            setTeams(teamsData);
-            
-            // 型定義を追加
-            interface TeamData {
-            hearts: number;
-            comments?: any[];
-            name: string;
-            }
-            
-            const totalVotes = teamsData.reduce((sum: number, team: TeamData) => sum + team.hearts, 0);
-            const totalComments = teamsData.reduce((sum: number, team: TeamData) => sum + (team.comments?.length || 0), 0);
-            const topTeam = teamsData.reduce((prev: TeamData, current: TeamData) => 
-            (prev.hearts > current.hearts) ? prev : current, teamsData[0]);
+          const teamsData: TeamStats[] = teamsResult.data;
+          setTeams(teamsData);
+          
+          const totalVotes = teamsData.reduce((sum: number, team: TeamStats) => sum + team.hearts, 0);
+          const totalComments = teamsData.reduce((sum: number, team: TeamStats) => sum + (team.comments?.length || 0), 0);
+          
+          // topTeamの安全な取得
+          let topTeam: { name: string; hearts: number } | null = null;
+          if (teamsData.length > 0) {
+            const maxHeartsTeam = teamsData.reduce((prev: TeamStats, current: TeamStats) => 
+              (prev.hearts > current.hearts) ? prev : current
+            );
+            topTeam = { name: maxHeartsTeam.name, hearts: maxHeartsTeam.hearts };
+          }
 
-            setStats({
+          // ユーザーデータを先に取得してからstatsを設定
+          const usersResponse = await fetch('/api/debug-users');
+          let activeUsersCount = 0;
+          
+          if (usersResponse.ok) {
+            const usersResult = await usersResponse.json();
+            if (usersResult.success && usersResult.data) {
+              const usersData: UserStats[] = usersResult.data;
+              setUsers(usersData);
+              activeUsersCount = usersData.filter(u => u.isActive).length;
+            }
+          }
+
+          const statsData: AdminStats = {
             totalTeams: teamsData.length,
             totalVotes: totalVotes,
             totalComments: totalComments,
-            topTeam: topTeam ? { name: topTeam.name, hearts: topTeam.hearts } : null,
-            activeUsers: users.filter(u => u.isActive).length
-            });
+            topTeam: topTeam,
+            activeUsers: activeUsersCount
+          };
+          
+          setStats(statsData);
         }
-        }
-
-        // ユーザーデータ取得
-        const usersResponse = await fetch('/api/debug-users');
-        if (usersResponse.ok) {
-        const usersResult = await usersResponse.json();
-        if (usersResult.success && usersResult.data) {
-            setUsers(usersResult.data);
-        }
-        }
+      }
     } catch (error) {
-        console.error('Stats fetch error:', error);
+      console.error('Stats fetch error:', error);
     } finally {
-        setRefreshing(false);
+      setRefreshing(false);
     }
-    };
+  };
 
   useEffect(() => {
     fetchStats();
@@ -98,67 +104,6 @@ export default function Admin() {
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  const handleExportData = async () => {
-    try {
-      const response = await fetch('/api/export-votes');
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `steam-days-votes-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        setSetupStatus('✅ 投票データをエクスポートしました');
-      } else {
-        setSetupStatus('❌ エクスポートに失敗しました');
-      }
-    } catch (error) {
-      console.error('Export error:', error);
-      setSetupStatus('❌ エクスポート中にエラーが発生しました');
-    }
-  };
-
-  const handleClearData = async (clearType: string) => {
-    const confirmMessages = {
-      teams: 'すべてのチームデータを削除しますか？\nこの操作は取り消せません。',
-      votes: '投票データのみをリセットしますか？\n（チーム情報は残ります）',
-      users: '管理者以外のユーザーを削除しますか？\nこの操作は取り消せません。',
-      all: 'すべてのデータを削除しますか？\n（管理者アカウントのみ残ります）\n\n⚠️ この操作は取り消せません！'
-    };
-
-    const message = confirmMessages[clearType as keyof typeof confirmMessages];
-    if (!confirm(message)) return;
-
-    setLoading(true);
-    setSetupStatus('データを削除中...');
-
-    try {
-      const response = await fetch('/api/clear-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clearType })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSetupStatus(`✅ ${result.message}`);
-        // データを再取得
-        setTimeout(fetchStats, 1000);
-      } else {
-        setSetupStatus(`❌ エラー: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Clear data error:', error);
-      setSetupStatus('❌ データ削除中にエラーが発生しました');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleTeamStatusChange = async (teamId: string, newStatus: string) => {
     // 将来の機能として実装予定
@@ -206,7 +151,7 @@ export default function Admin() {
         {/* ヘッダー */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-content-center">
+            <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
               </svg>
@@ -427,8 +372,9 @@ export default function Admin() {
             </div>
           </div>
         </div>
+
         {/* フッター */}
-        <div className="text-center text-gray-500 text-sm">
+        <div className="mt-8 text-center text-gray-500 text-sm">
           <p>STEAM DAYS 2025 - 運営管理システム</p>
           <p>中高生の「好き」と「やりたい」を社会課題解決につなげるプログラム</p>
         </div>

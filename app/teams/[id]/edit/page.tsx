@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
@@ -27,11 +27,30 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
   const [technologyInput, setTechnologyInput] = useState('');
 
   // 権限チェック
-  const canEdit = () => {
+  const canEdit = useCallback(() => {
     if (!session?.user) return false;
     return session.user.role === 'admin' || 
            (session.user.role === 'presenter' && session.user.teamId === params.id);
-  };
+  }, [session, params.id]);
+
+  const fetchTeam = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/teams/${params.id}`);
+      if (!response.ok) throw new Error('チーム情報の取得に失敗しました');
+      
+      const result = await response.json();
+      if (result.success) {
+        setTeam(result.data);
+      } else {
+        throw new Error(result.error || 'チーム情報の取得に失敗しました');
+      }
+    } catch (error) {
+      console.error('Team fetch error:', error);
+      setError('チーム情報の読み込みに失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -47,25 +66,7 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
     }
 
     fetchTeam();
-  }, [session, status, params.id]);
-
-  const fetchTeam = async () => {
-    try {
-      const response = await fetch(`/api/teams/${params.id}`);
-      if (!response.ok) throw new Error('チーム情報の取得に失敗しました');
-      
-      const result = await response.json();
-      if (result.success) {
-        setTeam(result.data);
-      } else {
-        throw new Error(result.error || 'チーム情報の取得に失敗しました');
-      }
-    } catch (err) {
-      setError('チーム情報の読み込みに失敗しました');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [session, status, params.id, canEdit, fetchTeam, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +91,8 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
       }
 
       router.push(`/teams/${params.id}`);
-    } catch (err) {
+    } catch (error) {
+      console.error('Save error:', error);
       setError('保存に失敗しました。もう一度お試しください。');
     } finally {
       setSaving(false);

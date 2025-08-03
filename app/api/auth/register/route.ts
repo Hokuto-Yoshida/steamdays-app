@@ -90,7 +90,8 @@ export async function POST(request: NextRequest) {
     console.log('✅ ユーザー作成成功:', savedUser._id);
 
     // パスワードを除いてレスポンス
-    const { password: _, ...userWithoutPassword } = savedUser.toObject();
+    const { password: removedPassword, ...userWithoutPassword } = savedUser.toObject();
+    // removedPasswordは意図的に未使用（セキュリティのため除外）
 
     return NextResponse.json({
       success: true,
