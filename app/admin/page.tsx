@@ -52,6 +52,11 @@ export default function Admin() {
     title: ''
   });
 
+  // ユーザー管理関連のstate
+  const [showUserStats, setShowUserStats] = useState(false);
+  const [userFilter, setUserFilter] = useState('all');
+  const [userSearch, setUserSearch] = useState('');
+
   // 統計データの取得
   const fetchStats = async () => {
     setRefreshing(true);
@@ -76,8 +81,8 @@ export default function Admin() {
             topTeam = { name: maxHeartsTeam.name, hearts: maxHeartsTeam.hearts };
           }
 
-          // ユーザーデータを先に取得してからstatsを設定
-          const usersResponse = await fetch('/api/debug-users');
+          // ユーザーデータ取得（修正版）
+          const usersResponse = await fetch('/api/users');
           let activeUsersCount = 0;
           
           if (usersResponse.ok) {
@@ -86,7 +91,12 @@ export default function Admin() {
               const usersData: UserStats[] = usersResult.data;
               setUsers(usersData);
               activeUsersCount = usersData.filter(u => u.isActive).length;
+              console.log(`👥 ユーザー取得成功: ${usersData.length}名`);
+            } else {
+              console.error('ユーザー取得エラー:', usersResult.error);
             }
+          } else {
+            console.error('ユーザーAPI呼び出しエラー:', usersResponse.status);
           }
 
           const statsData: AdminStats = {
@@ -176,6 +186,73 @@ export default function Admin() {
     fetchStats(); // 再読み込み
   };
 
+  // ユーザーステータス切り替え
+  const toggleUserStatus = async (userId: string, newStatus: boolean) => {
+    if (!confirm(`このユーザーを${newStatus ? '有効' : '無効'}にしますか？`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: newStatus })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSetupStatus(`✅ ユーザーステータスを${newStatus ? '有効' : '無効'}に変更しました`);
+        fetchStats(); // 再読み込み
+      } else {
+        alert(`エラー: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('User status toggle error:', error);
+      alert('ステータス変更中にエラーが発生しました');
+    }
+  };
+
+  // ユーザー削除
+  const deleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`「${userName}」を削除しますか？\n\nこの操作は取り消せません。`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSetupStatus(`✅ ユーザー「${userName}」を削除しました`);
+        fetchStats(); // 再読み込み
+      } else {
+        alert(`エラー: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('User deletion error:', error);
+      alert('ユーザー削除中にエラーが発生しました');
+    }
+  };
+
+  // ユーザー詳細表示
+  const showUserDetails = (user: UserStats) => {
+    const details = [
+      `名前: ${user.name}`,
+      `メール: ${user.email}`,
+      `ロール: ${getRoleDisplayName(user.role)}`,
+      user.teamId ? `チーム: ${user.teamId}` : '',
+      `ステータス: ${user.isActive ? 'アクティブ' : '無効'}`,
+      `登録日: ${new Date(user.createdAt).toLocaleString('ja-JP')}`,
+      user.lastLogin ? `最終ログイン: ${new Date(user.lastLogin).toLocaleString('ja-JP')}` : '最終ログイン: 未記録'
+    ].filter(Boolean).join('\n');
+    
+    alert(details);
+  };
+
   useEffect(() => {
     fetchStats();
     // 30秒ごとに自動更新
@@ -227,6 +304,15 @@ export default function Admin() {
     };
     return colorMap[role] || 'bg-gray-100 text-gray-800';
   };
+
+  // フィルター済みユーザー
+  const filteredUsers = users.filter(user => {
+    const matchesFilter = userFilter === 'all' || user.role === userFilter;
+    const matchesSearch = userSearch === '' || 
+      user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      user.email.toLowerCase().includes(userSearch.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   if (loading && !stats) {
     return (
@@ -323,7 +409,7 @@ export default function Admin() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 gap-8 mb-8">
           {/* チーム管理パネル */}
           <div className="bg-white rounded-lg shadow-sm border">
             <div className="p-6 border-b border-gray-200 flex items-center gap-2">
@@ -498,66 +584,297 @@ export default function Admin() {
               )}
             </div>
           </div>
-        </div>
 
-        {/* ユーザー管理 */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 border-b border-gray-200 flex items-center gap-2">
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-            </svg>
-            <h2 className="text-xl font-bold">ユーザー管理</h2>
-          </div>
-          <div className="p-6">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー名</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">メール</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ロール</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">登録日</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ステータス</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        {user.teamId && (
-                          <div className="text-sm text-purple-600">チーム {user.teamId}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
-                          {getRoleDisplayName(user.role)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(user.createdAt).toLocaleDateString('ja-JP')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {user.isActive ? 'アクティブ' : '無効'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {users.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <div className="text-4xl mb-4">👥</div>
-                  <p className="text-lg mb-2">ユーザーの登録をお待ちしています</p>
-                  <p className="text-sm">参加者が登録すると、こちらに表示されます</p>
+          {/* ユーザー管理パネル */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+                <h2 className="text-xl font-bold">登録ユーザー管理</h2>
+                <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+                  {users.length}名登録済み
+                </span>
+              </div>
+              
+              {/* 統計表示トグル */}
+              <button
+                onClick={() => setShowUserStats(!showUserStats)}
+                className="flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4" />
+                </svg>
+                {showUserStats ? '統計を隠す' : '統計を表示'}
+              </button>
+            </div>
+
+            {/* ユーザー統計パネル */}
+            {showUserStats && (
+              <div className="p-6 bg-gray-50 border-b border-gray-200">
+                <h3 className="text-lg font-semibold mb-4">📊 ユーザー統計</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-lg p-4 border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600">管理者</p>
+                        <p className="text-2xl font-bold text-red-600">
+                          {users.filter(u => u.role === 'admin').length}
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                        <span className="text-red-600 text-sm font-bold">🔧</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600">発表者</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {users.filter(u => u.role === 'presenter').length}
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 text-sm font-bold">👥</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600">投票者</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {users.filter(u => u.role === 'voter').length}
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 text-sm font-bold">🗳️</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600">アクティブ</p>
+                        <p className="text-2xl font-bold text-purple-600">
+                          {users.filter(u => u.isActive).length}
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-purple-600 text-sm font-bold">✅</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* フィルター・検索バー */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => setUserFilter('all')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      userFilter === 'all' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    全て ({users.length})
+                  </button>
+                  <button
+                    onClick={() => setUserFilter('admin')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      userFilter === 'admin' 
+                        ? 'bg-red-500 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    🔧 管理者 ({users.filter(u => u.role === 'admin').length})
+                  </button>
+                  <button
+                    onClick={() => setUserFilter('presenter')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      userFilter === 'presenter' 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    👥 発表者 ({users.filter(u => u.role === 'presenter').length})
+                  </button>
+                  <button
+                    onClick={() => setUserFilter('voter')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      userFilter === 'voter' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    🗳️ 投票者 ({users.filter(u => u.role === 'voter').length})
+                  </button>
+                </div>
+                
+                <div className="flex gap-2 ml-auto">
+                  <input
+                    type="text"
+                    placeholder="名前・メールで検索..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                  />
+                  {userSearch && (
+                    <button
+                      onClick={() => setUserSearch('')}
+                      className="px-2 py-1 text-gray-500 hover:text-gray-700"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ユーザー一覧テーブル */}
+            <div className="p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        ユーザー情報
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        ロール・チーム
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        登録日・ステータス
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        管理アクション
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredUsers.map((user) => (
+                      <tr key={user._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            {/* アバター */}
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
+                                <span className="text-white font-bold text-sm">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                            {/* 名前・メール */}
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
+                            {getRoleDisplayName(user.role)}
+                          </span>
+                          {user.teamId && (
+                            <div className="text-sm text-purple-600 mt-1">
+                              📋 チーム {user.teamId}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {new Date(user.createdAt).toLocaleDateString('ja-JP', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(user.createdAt).toLocaleTimeString('ja-JP', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${
+                            user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {user.isActive ? '✅ アクティブ' : '❌ 無効'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex gap-2">
+                            {/* ステータス切り替え */}
+                            <button
+                              onClick={() => toggleUserStatus(user._id, !user.isActive)}
+                              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                                user.isActive 
+                                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              }`}
+                            >
+                              {user.isActive ? '🔒 無効化' : '🔓 有効化'}
+                            </button>
+                            
+                            {/* 削除ボタン（管理者以外のみ） */}
+                            {user.role !== 'admin' && (
+                              <button
+                                onClick={() => deleteUser(user._id, user.name)}
+                                className="px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                              >
+                                🗑️ 削除
+                              </button>
+                            )}
+                            
+                            {/* 詳細情報ボタン */}
+                            <button
+                              onClick={() => showUserDetails(user)}
+                              className="px-3 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                            >
+                              👁️ 詳細
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {/* 空の状態 */}
+                {filteredUsers.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    <div className="text-6xl mb-4">👥</div>
+                    <p className="text-xl mb-2">
+                      {userFilter === 'all' 
+                        ? 'ユーザーの登録をお待ちしています'
+                        : `${getRoleDisplayName(userFilter)}のユーザーが見つかりません`
+                      }
+                    </p>
+                    <p className="text-sm">
+                      {userFilter === 'all'
+                        ? '参加者が新規登録すると、こちらに表示されます'
+                        : 'フィルターを変更するか、検索条件を調整してください'
+                      }
+                    </p>
+                    {userSearch && (
+                      <button
+                        onClick={() => setUserSearch('')}
+                        className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        検索をクリア
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
