@@ -23,9 +23,27 @@ interface Team {
   members: string[];
   technologies: string[];
   scratchUrl?: string;
-  imageUrl?: string; // カバー画像URL追加
+  imageUrl?: string;
   hearts: number;
   comments: Comment[];
+}
+
+// Scratch埋め込みURL変換関数
+function getScratchEmbedUrl(url: string): string {
+  if (!url) return '';
+  
+  // 既に埋め込みURLの場合はそのまま返す
+  if (url.includes('/embed')) {
+    return url;
+  }
+  
+  // 通常のScratchプロジェクトURLから埋め込みURLを生成
+  const projectIdMatch = url.match(/projects\/(\d+)/);
+  if (projectIdMatch) {
+    return `https://scratch.mit.edu/projects/${projectIdMatch[1]}/embed`;
+  }
+  
+  return url;
 }
 
 export default function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -61,7 +79,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
         
         if (result.success) {
           setTeam(result.data);
-          setImageError(false); // 新しいチーム読み込み時にエラー状態をリセット
+          setImageError(false);
         } else {
           console.error('Team fetch error:', result.error);
         }
@@ -98,17 +116,13 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       const result = await response.json();
       
       if (result.success) {
-        // 投票成功
         setTeam(result.data);
         setShowVoteModal(false);
         setVoteReason('');
         setHasVoted(true);
         markTeamAsVoted(teamId);
-        
-        // 成功メッセージを表示
         alert('投票ありがとうございます！❤️');
       } else {
-        // エラー処理
         if (result.error === 'Already voted for this team') {
           alert('このチームには既に投票済みです');
           setHasVoted(true);
@@ -154,9 +168,11 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
     );
   }
 
+  // Scratch埋め込みURL
+  const scratchEmbedUrl = team.scratchUrl ? getScratchEmbedUrl(team.scratchUrl) : '';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-      {/* ナビゲーションバー */}
       <Navbar 
         title={`${team.name} のプロジェクト`}
         showBackButton={true}
@@ -166,7 +182,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* カバー画像とチーム情報ヘッダー */}
         <div className="bg-white rounded-lg shadow-md mb-8 overflow-hidden">
-          {/* カバー画像セクション */}
           {team.imageUrl && !imageError ? (
             <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden">
               <img
@@ -175,10 +190,8 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                 onError={() => setImageError(true)}
               />
-              {/* グラデーションオーバーレイ */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
               
-              {/* チーム名とタイトルを画像上に表示 */}
               <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
@@ -198,7 +211,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
               </div>
             </div>
           ) : (
-            // 画像がない場合のデフォルト表示
             <div className="bg-gradient-to-br from-blue-500 to-purple-600 h-64 md:h-80 lg:h-96 flex items-center justify-center relative">
               <div className="text-center text-white">
                 <div className="w-24 h-24 md:w-32 md:h-32 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -254,80 +266,121 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold mb-4">🎮 アプリを体験してみよう</h2>
               
-              {/* Scratchプロジェクト埋め込みエリア */}
-              {team.scratchUrl ? (
+              {scratchEmbedUrl ? (
                 <div className="mb-4">
                   {!isFullscreen ? (
-                    <div className="relative">
+                    // 小さなプレビュー表示（修正版）
+                    <div className="relative bg-gray-50 rounded-lg overflow-hidden border-2 border-gray-200">
                       <iframe
-                        src={team.scratchUrl}
+                        src={scratchEmbedUrl}
                         width="100%"
-                        height="400"
-                        className="border rounded-lg"
+                        height="320"
+                        className="border-0 rounded-lg"
                         title={`${team.name} - Scratchプロジェクト`}
+                        allowFullScreen
+                        loading="lazy"
                       />
-                      <div className="absolute top-2 right-2">
+                      
+                      {/* オーバーレイボタン */}
+                      <div className="absolute top-3 right-3 flex gap-2">
                         <button
                           onClick={() => setIsFullscreen(true)}
-                          className="bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm hover:bg-opacity-70 transition-opacity"
+                          className="bg-black bg-opacity-70 hover:bg-opacity-90 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 shadow-lg"
                         >
-                          🔍 拡大
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                          </svg>
+                          拡大
                         </button>
+                      </div>
+                      
+                      {/* プレイ誘導オーバーレイ */}
+                      <div className="absolute bottom-3 left-3 bg-green-500 bg-opacity-90 text-white px-3 py-2 rounded-full text-sm font-medium shadow-lg">
+                        ▶️ 緑の旗をクリックしてスタート！
                       </div>
                     </div>
                   ) : (
-                    <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-                      <div className="w-full h-full max-w-6xl max-h-full bg-white rounded-lg overflow-hidden">
-                        <div className="flex justify-between items-center p-4 border-b">
-                          <h3 className="font-semibold">{team.title}</h3>
-                          <button
-                            onClick={() => setIsFullscreen(false)}
-                            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
-                          >
-                            ✕ 閉じる
-                          </button>
+                    // フルスクリーンモーダル
+                    <div className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4">
+                      <div className="w-full h-full max-w-7xl max-h-full bg-white rounded-lg overflow-hidden">
+                        <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg">{team.title}</h3>
+                              <p className="text-sm text-gray-600">{team.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <a
+                              href={team.scratchUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+                            >
+                              🐱 Scratchで開く
+                            </a>
+                            <button
+                              onClick={() => setIsFullscreen(false)}
+                              className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                            >
+                              ✕ 閉じる
+                            </button>
+                          </div>
                         </div>
                         <iframe
-                          src={team.scratchUrl}
+                          src={scratchEmbedUrl}
                           width="100%"
                           height="calc(100% - 70px)"
-                          title={`${team.name} - Scratchプロジェクト`}
+                          title={`${team.name} - Scratchプロジェクト（フルスクリーン）`}
+                          className="border-0"
+                          allowFullScreen
                         />
                       </div>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="bg-gray-100 rounded-lg p-8 text-center mb-4">
-                  <div className="w-full h-64 bg-green-100 rounded-lg flex items-center justify-center border-2 border-dashed border-green-300">
+                // プロジェクト準備中の表示
+                <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-8 text-center mb-4 border-2 border-dashed border-green-200">
+                  <div className="w-full h-48 bg-white bg-opacity-50 rounded-lg flex items-center justify-center">
                     <div className="text-center">
-                      <div className="text-4xl mb-2">🐱</div>
-                      <p className="text-green-700 font-medium">Scratchプロジェクト</p>
-                      <p className="text-green-600 text-sm">準備中...</p>
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <p className="text-green-700 font-semibold text-lg mb-1">Scratchプロジェクト</p>
+                      <p className="text-green-600 text-sm">まもなく公開予定...</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="flex gap-2">
+              {/* アクションボタン */}
+              <div className="flex gap-3">
                 {team.scratchUrl && (
                   <a
-                    href={team.scratchUrl.replace('/embed', '')}
+                    href={team.scratchUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors"
+                    className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors font-medium flex items-center gap-2"
                   >
-                    🐱 Scratchで開く
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Scratchで開く
                   </a>
                 )}
-                <button className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors">
-                  💻 コードを見る
-                </button>
               </div>
             </div>
           </div>
 
-          {/* サイドバー */}
+          {/* サイドバー - 既存のコードと同じ */}
           <div className="space-y-6">
             {/* 投票セクション */}
             <div className="bg-white rounded-lg shadow-md p-6">
