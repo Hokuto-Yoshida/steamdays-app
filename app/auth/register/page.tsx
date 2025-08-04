@@ -1,8 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
+interface Team {
+  id: string;
+  name: string;
+}
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -15,7 +20,34 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
   const router = useRouter();
+
+  // チーム一覧を取得
+  const fetchTeams = async () => {
+    setTeamsLoading(true);
+    try {
+      const response = await fetch('/api/teams/list');
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setTeams(result.data || []);
+        }
+      }
+    } catch (error) {
+      console.error('Teams fetch error:', error);
+    } finally {
+      setTeamsLoading(false);
+    }
+  };
+
+  // 発表者が選択されたときにチーム一覧を取得
+  useEffect(() => {
+    if (formData.role === 'presenter') {
+      fetchTeams();
+    }
+  }, [formData.role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +120,9 @@ export default function RegisterPage() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
+      // ロールが変更されたらチームIDをリセット
+      ...(name === 'role' && value !== 'presenter' ? { teamId: '' } : {})
     }));
   };
 
@@ -191,7 +225,7 @@ export default function RegisterPage() {
             {formData.role === 'presenter' && (
               <div>
                 <label htmlFor="teamId" className="block text-sm font-medium text-gray-700 mb-1">
-                  チームID *
+                  チーム選択 *
                 </label>
                 <select
                   id="teamId"
@@ -199,22 +233,45 @@ export default function RegisterPage() {
                   value={formData.teamId}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={teamsLoading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 >
-                  <option value="">チームを選択してください</option>
-                  <option value="1">チーム 1 - コネクト</option>
-                  <option value="2">チーム 2 - ハーモニー</option>
-                  <option value="3">チーム 3 - エンパワー</option>
-                  <option value="4">チーム 4 - サポート</option>
-                  <option value="5">チーム 5 - クリエイト</option>
-                  <option value="6">チーム 6 - ブリッジ</option>
+                  <option value="">
+                    {teamsLoading ? 'チーム読み込み中...' : 'チームを選択してください'}
+                  </option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
                 </select>
+                
+                {!teamsLoading && teams.length === 0 && (
+                  <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-yellow-700 text-sm">
+                      ⚠️ まだチームが作成されていません。管理者にお問い合わせください。
+                    </p>
+                  </div>
+                )}
+
+                {teams.length > 0 && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={fetchTeams}
+                      disabled={teamsLoading}
+                      className="text-blue-500 hover:text-blue-600 text-sm disabled:text-gray-400"
+                    >
+                      {teamsLoading ? '更新中...' : '🔄 チーム一覧を更新'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (formData.role === 'presenter' && teamsLoading)}
               className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:bg-gray-300 transition-colors"
             >
               {loading ? '⏳ 登録中...' : 'アカウント作成'}
@@ -232,9 +289,10 @@ export default function RegisterPage() {
                 <strong>👥 発表者:</strong> 自分のチームのプロジェクト編集と投票ができます
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              ※ 管理者アカウントは運営によって別途作成されます
-            </p>
+            <div className="mt-2 text-xs text-gray-500">
+              <p>※ 管理者アカウントは運営によって別途作成されます</p>
+              <p>※ チームが表示されない場合は、管理者がまだチームを作成していない可能性があります</p>
+            </div>
           </div>
 
           {/* ログインリンク */}
@@ -246,16 +304,6 @@ export default function RegisterPage() {
               </Link>
             </p>
           </div>
-        </div>
-
-        {/* ゲストアクセス */}
-        <div className="text-center mt-6">
-          <Link
-            href="/"
-            className="text-blue-500 hover:text-blue-600 text-sm"
-          >
-            ← ゲストとして閲覧する
-          </Link>
         </div>
       </div>
     </div>

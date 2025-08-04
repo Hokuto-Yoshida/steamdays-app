@@ -66,8 +66,12 @@ export async function PUT(
     await dbConnect();
     
     const body = await request.json();
+    console.log('📝 チーム更新データ受信:', { 
+      ...body, 
+      imageUrl: body.imageUrl ? `[${body.imageUrl.length} chars]` : 'なし' 
+    });
     
-    // 更新可能なフィールドのみを抽出
+    // 更新可能なフィールドのみを抽出（imageUrl追加）
     const updateData = {
       name: body.name,
       title: body.title,
@@ -76,9 +80,15 @@ export async function PUT(
       approach: body.approach,
       members: body.members || [],
       technologies: body.technologies || [],
-      scratchUrl: body.scratchUrl,
+      scratchUrl: body.scratchUrl || '',
+      imageUrl: body.imageUrl || '', // 🖼️ 画像URL追加
       updatedAt: new Date()
     };
+
+    console.log('💾 更新データ:', { 
+      ...updateData, 
+      imageUrl: updateData.imageUrl ? `[${updateData.imageUrl.length} chars]` : 'なし' 
+    });
 
     // バリデーション
     if (!updateData.name || !updateData.title || !updateData.description) {
@@ -101,6 +111,12 @@ export async function PUT(
       );
     }
 
+    console.log('✅ チーム更新成功:', {
+      id: updatedTeam.id,
+      name: updatedTeam.name,
+      hasImage: !!updatedTeam.imageUrl
+    });
+
     return NextResponse.json({
       success: true,
       message: 'Team updated successfully',
@@ -108,7 +124,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Team update error:', error);
+    console.error('❌ Team update error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to update team' },
       { status: 500 }

@@ -42,6 +42,15 @@ export default function Admin() {
   const [teams, setTeams] = useState<TeamStats[]>([]);
   const [users, setUsers] = useState<UserStats[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // チーム作成関連のstate
+  const [teamCreating, setTeamCreating] = useState(false);
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [newTeamData, setNewTeamData] = useState({
+    id: '',
+    name: '',
+    title: ''
+  });
 
   // 統計データの取得
   const fetchStats = async () => {
@@ -98,6 +107,75 @@ export default function Admin() {
     }
   };
 
+  // チーム作成関数
+  const createTeam = async () => {
+    if (!newTeamData.id || !newTeamData.name) {
+      alert('チームIDと名前は必須です');
+      return;
+    }
+
+    setTeamCreating(true);
+    try {
+      const response = await fetch('/api/admin/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTeamData)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSetupStatus(`✅ ${result.message}`);
+        setNewTeamData({ id: '', name: '', title: '' });
+        setShowCreateTeam(false);
+        fetchStats(); // 再読み込み
+      } else {
+        alert(`エラー: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Team creation error:', error);
+      alert('チーム作成中にエラーが発生しました');
+    } finally {
+      setTeamCreating(false);
+    }
+  };
+
+  // デフォルトチーム一括作成
+  const createDefaultTeams = async () => {
+    const defaultTeams = [
+      { id: '1', name: 'チーム1 - コネクト', title: '' },
+      { id: '2', name: 'チーム2 - ハーモニー', title: '' },
+      { id: '3', name: 'チーム3 - エンパワー', title: '' },
+      { id: '4', name: 'チーム4 - サポート', title: '' },
+      { id: '5', name: 'チーム5 - クリエイト', title: '' },
+      { id: '6', name: 'チーム6 - ブリッジ', title: '' }
+    ];
+
+    setTeamCreating(true);
+    let successCount = 0;
+    
+    for (const team of defaultTeams) {
+      try {
+        const response = await fetch('/api/admin/teams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(team)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`Error creating team ${team.id}:`, error);
+      }
+    }
+
+    setSetupStatus(`✅ ${successCount}個のチームを作成しました`);
+    setTeamCreating(false);
+    fetchStats(); // 再読み込み
+  };
+
   useEffect(() => {
     fetchStats();
     // 30秒ごとに自動更新
@@ -106,8 +184,30 @@ export default function Admin() {
   }, []);
 
   const handleTeamStatusChange = async (teamId: string, newStatus: string) => {
-    // 将来の機能として実装予定
-    alert(`チーム${teamId}のステータスを${newStatus}に変更する機能は開発予定です`);
+    try {
+      console.log(`🔄 チーム${teamId}のステータスを${newStatus}に変更中...`);
+      
+      const response = await fetch(`/api/teams/${teamId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSetupStatus(`✅ ${result.message}`);
+        // チーム一覧を再読み込み
+        fetchStats();
+      } else {
+        alert(`ステータス更新に失敗しました: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('ステータス更新エラー:', error);
+      alert('ステータス更新中にエラーが発生しました');
+    }
   };
 
   const getRoleDisplayName = (role: string) => {
@@ -232,12 +332,101 @@ export default function Admin() {
               </svg>
               <h2 className="text-xl font-bold">チーム管理</h2>
             </div>
+
+            {/* チーム作成機能 */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* 一括作成ボタン */}
+                <button
+                  onClick={createDefaultTeams}
+                  disabled={teamCreating || teams.length > 0}
+                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  {teamCreating ? '作成中...' : 'デフォルトチーム作成 (1-6)'}
+                </button>
+
+                {/* 個別作成ボタン */}
+                <button
+                  onClick={() => setShowCreateTeam(!showCreateTeam)}
+                  className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  カスタムチーム作成
+                </button>
+              </div>
+
+              {/* 個別作成フォーム */}
+              {showCreateTeam && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-3">新しいチーム作成</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        チームID *
+                      </label>
+                      <input
+                        type="text"
+                        value={newTeamData.id}
+                        onChange={(e) => setNewTeamData({...newTeamData, id: e.target.value})}
+                        placeholder="1, 2, 3..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        チーム名 *
+                      </label>
+                      <input
+                        type="text"
+                        value={newTeamData.name}
+                        onChange={(e) => setNewTeamData({...newTeamData, name: e.target.value})}
+                        placeholder="チーム7 - イノベート"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        プロジェクトタイトル
+                      </label>
+                      <input
+                        type="text"
+                        value={newTeamData.title}
+                        onChange={(e) => setNewTeamData({...newTeamData, title: e.target.value})}
+                        placeholder="(オプション)"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={createTeam}
+                      disabled={teamCreating}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-300 transition-colors"
+                    >
+                      {teamCreating ? '作成中...' : 'チーム作成'}
+                    </button>
+                    <button
+                      onClick={() => setShowCreateTeam(false)}
+                      className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="p-6">
               {teams.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <div className="text-4xl mb-4">📝</div>
                   <p className="text-lg mb-2">チームの登録をお待ちしています</p>
-                  <p className="text-sm">発表者が登録すると、こちらに表示されます</p>
+                  <p className="text-sm">上のボタンでチームを作成してください</p>
                 </div>
               ) : (
                 <div className="space-y-4">

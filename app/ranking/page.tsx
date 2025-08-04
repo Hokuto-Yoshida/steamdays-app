@@ -18,7 +18,6 @@ interface Team {
 export default function Ranking() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'hearts' | 'comments'>('hearts');
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // データを取得する関数をuseCallbackでメモ化
@@ -28,13 +27,8 @@ export default function Ranking() {
       const result = await response.json();
       
       if (result.success) {
-        const sortedTeams = [...result.data].sort((a, b) => {
-          if (sortBy === 'hearts') {
-            return b.hearts - a.hearts;
-          } else {
-            return b.comments.length - a.comments.length;
-          }
-        });
+        // ハート数順で並び替え
+        const sortedTeams = [...result.data].sort((a, b) => b.hearts - a.hearts);
         setTeams(sortedTeams);
         setLastUpdate(new Date());
       }
@@ -43,7 +37,7 @@ export default function Ranking() {
     } finally {
       setLoading(false);
     }
-  }, [sortBy]); // sortByが変更されたときのみ再作成
+  }, []);
 
   // 初期データ取得と定期更新
   useEffect(() => {
@@ -52,18 +46,7 @@ export default function Ranking() {
     // 30秒ごとに自動更新
     const interval = setInterval(fetchTeams, 30000);
     return () => clearInterval(interval);
-  }, [fetchTeams]); // fetchTeamsを依存関係に追加
-
-  // ソート変更時の処理（不要なuseEffectを削除）
-  // teams配列のソートはfetchTeams内で行うため、このuseEffectは削除
-
-  const getTotalVotes = () => {
-    return teams.reduce((total, team) => total + team.hearts, 0);
-  };
-
-  const getTotalComments = () => {
-    return teams.reduce((total, team) => total + team.comments.length, 0);
-  };
+  }, [fetchTeams]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -112,51 +95,20 @@ export default function Ranking() {
       />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* 統計情報 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="text-3xl font-bold text-blue-600">{teams.length}</div>
-            <p className="text-gray-600">参加チーム</p>
-          </div>
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="text-3xl font-bold text-red-600">{getTotalVotes()}</div>
-            <p className="text-gray-600">総投票数</p>
-          </div>
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="text-3xl font-bold text-green-600">{getTotalComments()}</div>
-            <p className="text-gray-600">総コメント数</p>
-          </div>
-        </div>
-
-        {/* 最終更新時刻 */}
+        {/* 最終更新時刻とソート情報 */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span className="font-medium text-gray-700">並び替え:</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSortBy('hearts')}
-                  className={`px-4 py-2 rounded-md transition-colors ${
-                    sortBy === 'hearts'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  ❤️ ハート数順
-                </button>
-                <button
-                  onClick={() => setSortBy('comments')}
-                  className={`px-4 py-2 rounded-md transition-colors ${
-                    sortBy === 'comments'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  💬 コメント数順
-                </button>
+              <span className="font-medium text-gray-700">並び順:</span>
+              <div className="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-md">
+                <span>❤️</span>
+                <span className="font-medium">ハート数順</span>
               </div>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               最終更新: {lastUpdate.toLocaleTimeString('ja-JP')}
             </div>
           </div>
@@ -166,14 +118,11 @@ export default function Ranking() {
         <div className="space-y-4">
           {teams.map((team, index) => {
             const rank = index + 1;
-            const percentage = sortBy === 'hearts' 
-              ? Math.round((team.hearts / getTotalVotes()) * 100) || 0
-              : Math.round((team.comments.length / getTotalComments()) * 100) || 0;
 
             return (
               <div
                 key={team.id}
-                className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${
+                className={`bg-white rounded-lg shadow-md p-6 border-l-4 transition-all duration-300 hover:shadow-lg ${
                   rank === 1 ? 'border-yellow-400 bg-gradient-to-r from-yellow-50 to-white' :
                   rank === 2 ? 'border-gray-400 bg-gradient-to-r from-gray-50 to-white' :
                   rank === 3 ? 'border-orange-400 bg-gradient-to-r from-orange-50 to-white' :
@@ -183,7 +132,7 @@ export default function Ranking() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 flex-1">
                     {/* ランク表示 */}
-                    <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${getRankColor(rank)} flex items-center justify-center text-white font-bold text-lg`}>
+                    <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${getRankColor(rank)} flex items-center justify-center text-white font-bold text-lg shadow-lg`}>
                       {rank <= 3 ? getRankIcon(rank) : rank}
                     </div>
 
@@ -194,82 +143,85 @@ export default function Ranking() {
                       </h3>
                       <p className="text-gray-600 text-sm mb-2">{team.title}</p>
                       <div className="flex flex-wrap gap-2">
-                        {team.technologies.slice(0, 3).map((tech) => (
-                          <span key={tech} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                        {team.technologies.slice(0, 4).map((tech, index) => (
+                          <span 
+                            key={tech} 
+                            className={`text-xs px-2 py-1 rounded-full font-medium ${
+                              index === 0 ? 'bg-blue-100 text-blue-700' :
+                              index === 1 ? 'bg-green-100 text-green-700' :
+                              index === 2 ? 'bg-purple-100 text-purple-700' :
+                              'bg-orange-100 text-orange-700'
+                            }`}
+                          >
                             {tech}
                           </span>
                         ))}
+                        {team.technologies.length > 4 && (
+                          <span className="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded-full">
+                            +{team.technologies.length - 4}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* 得票数表示 */}
-                  <div className="text-right">
-                    <div className="flex items-center gap-6 mb-2">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-500">
-                          {team.hearts}
-                        </div>
-                        <p className="text-xs text-gray-500">ハート</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-500">
-                          {team.comments.length}
-                        </div>
-                        <p className="text-xs text-gray-500">コメント</p>
+                  {/* ハート数表示 */}
+                  <div className="text-center mr-6">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                      </svg>
+                      <div className="text-3xl font-bold text-red-500">
+                        {team.hearts}
                       </div>
                     </div>
-                    
-                    {/* プログレスバー */}
-                    <div className="w-32 bg-gray-200 rounded-full h-2 mb-2">
-                      <div
-                        className={`bg-gradient-to-r ${getRankColor(rank)} h-2 rounded-full transition-all duration-500`}
-                        style={{ width: `${percentage}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-gray-500">{percentage}%</p>
                   </div>
 
                   {/* アクションボタン */}
-                  <div className="ml-6">
+                  <div>
                     <Link
                       href={`/teams/${team.id}`}
-                      className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+                      className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 transition-colors font-medium shadow-md hover:shadow-lg flex items-center gap-2"
                     >
-                      詳細を見る
+                      <span>詳細を見る</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </Link>
                   </div>
                 </div>
-
-                {/* 最新コメント（上位3位まで表示） */}
-                {rank <= 3 && team.comments.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="font-medium text-gray-700 mb-2">💬 最新のコメント</h4>
-                    <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm text-gray-600 italic">
-                        &quot;{team.comments[team.comments.length - 1].reason}&quot;
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                        {new Date(team.comments[team.comments.length - 1].timestamp).toLocaleDateString('ja-JP')}
-                    </p>
-                    </div>
-                </div>
-                )}
               </div>
             );
           })}
         </div>
 
+        {/* データなしの場合 */}
+        {teams.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🏆</div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">まだ投票が開始されていません</h3>
+            <p className="text-gray-600">投票が開始されるとランキングが表示されます</p>
+          </div>
+        )}
+
         {/* 投票を促すCTA */}
-        <div className="mt-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-8 text-white text-center">
-          <h3 className="text-2xl font-bold mb-4">🗳️ まだ投票していませんか？</h3>
-          <p className="mb-6 text-blue-100">
-            気に入ったプロジェクトにハートを送って、オーディエンス賞の選考に参加しましょう！
+        <div className="mt-12 bg-gradient-to-r from-red-500 to-pink-600 rounded-lg shadow-lg p-8 text-white text-center">
+          <h3 className="text-2xl font-bold mb-4 flex items-center justify-center gap-2">
+            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            まだ投票していませんか？
+          </h3>
+          <p className="mb-6 text-red-100">
+            気に入ったプロジェクトにハートを送って、応援メッセージと一緒にオーディエンス賞の選考に参加しましょう！
           </p>
           <Link
             href="/"
-            className="bg-white text-blue-600 px-8 py-3 rounded-md font-semibold hover:bg-blue-50 transition-colors inline-block"
+            className="bg-white text-red-600 px-8 py-3 rounded-md font-semibold hover:bg-red-50 transition-colors inline-flex items-center gap-2 shadow-md hover:shadow-lg"
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
             プロジェクト一覧を見る
           </Link>
         </div>

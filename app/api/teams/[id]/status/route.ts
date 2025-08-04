@@ -1,6 +1,6 @@
+// app/api/teams/[id]/status/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth'; 
+import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/mongodb';
 import { Team } from '@/lib/models/Team';
 
@@ -9,67 +9,71 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // paramsを非同期で取得
-    const params = await context.params;
-    const { id } = params;
+    const { id } = await context.params;
+    console.log('🎯 チームステータス更新リクエスト - チームID:', id);
     
-    const session = await getServerSession(authOptions);
+    const body = await request.json();
+    const { status } = body;
     
-    // 管理者権限チェック
-    if (!session?.user || session.user.role !== 'admin') {
-      return NextResponse.json({
-        success: false,
-        error: '管理者権限が必要です'
-      }, { status: 403 });
+    console.log('📝 新しいステータス:', status);
+    
+    // ステータスのバリデーション
+    const validStatuses = ['upcoming', 'live', 'ended'];
+    if (!status || !validStatuses.includes(status)) {
+      console.log('❌ バリデーションエラー: 無効なステータス');
+      return NextResponse.json(
+        { success: false, error: '有効なステータスを指定してください (upcoming, live, ended)' },
+        { status: 400 }
+      );
     }
 
     await dbConnect();
     
-    const body = await request.json();
-    const { status } = body;
-
-    // ステータスのバリデーション
-    const validStatuses = ['upcoming', 'live', 'ended'];
-    if (!status || !validStatuses.includes(status)) {
-      return NextResponse.json({
-        success: false,
-        error: '無効なステータスです。upcoming, live, ended のいずれかを指定してください。'
-      }, { status: 400 });
-    }
-
+    // チーム存在確認とステータス更新
     const updatedTeam = await Team.findOneAndUpdate(
-      { id: id },
+      { id },
       { 
-        status: status,
+        status,
         updatedAt: new Date()
       },
-      { new: true, runValidators: true }
+      { new: true }
     );
 
     if (!updatedTeam) {
-      return NextResponse.json({
-        success: false,
-        error: 'チームが見つかりません'
-      }, { status: 404 });
+      console.log('❌ チームが見つかりません:', id);
+      return NextResponse.json(
+        { success: false, error: 'チームが見つかりません' },
+        { status: 404 }
+      );
     }
+
+    console.log('✅ ステータス更新成功:', {
+      teamId: updatedTeam.id,
+      teamName: updatedTeam.name,
+      newStatus: updatedTeam.status
+    });
 
     return NextResponse.json({
       success: true,
-      message: 'ステータスが更新されました',
-      data: {
-        teamId: updatedTeam.id,
-        teamName: updatedTeam.name,
-        status: updatedTeam.status,
-        updatedAt: updatedTeam.updatedAt
-      }
+      data: updatedTeam,
+      message: `${updatedTeam.name}のステータスを「${getStatusLabel(status)}」に更新しました`
     });
 
   } catch (error) {
-    console.error('Team status update error:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'ステータス更新中にエラーが発生しました',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('❌ ステータス更新エラー:', error);
+    return NextResponse.json(
+      { success: false, error: 'ステータスの更新に失敗しました' },
+      { status: 500 }
+    );
   }
+}
+
+// ステータスラベルを取得
+function getStatusLabel(status: string): string {
+  const statusLabels: { [key: string]: string } = {
+    'upcoming': '開始前',
+    'live': 'ピッチ中',
+    'ended': '終了'
+  };
+  return statusLabels[status] || status;
 }

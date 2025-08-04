@@ -134,16 +134,6 @@ export default function LoginPage() {
               </div>
             </div>
           </div>
-
-          {/* ゲストアクセス */}
-          <div className="mt-6 text-center">
-            <Link
-              href="/"
-              className="text-blue-500 hover:text-blue-600 text-sm"
-            >
-              ゲストとして閲覧する →
-            </Link>
-          </div>
         </div>
 
         {/* 新規登録リンク */}

@@ -14,6 +14,10 @@ interface Team {
   members: string[];
   technologies: string[];
   scratchUrl: string;
+  imageUrl: string; // Base64画像データまたはURL
+  hearts: number; // ハート数追加
+  comments: { reason: string; timestamp: Date; author: string }[]; // コメント追加
+  status?: string; // ステータス追加
 }
 
 export default function TeamEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +30,9 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
   const [memberInput, setMemberInput] = useState('');
   const [technologyInput, setTechnologyInput] = useState('');
   const [teamId, setTeamId] = useState<string>('');
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   // paramsを解決してteamIdを設定
   useEffect(() => {
@@ -53,6 +60,7 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
       const result = await response.json();
       if (result.success) {
         setTeam(result.data);
+        setImagePreview(result.data.imageUrl || '');
       } else {
         throw new Error(result.error || 'チーム情報の取得に失敗しました');
       }
@@ -63,6 +71,85 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
       setLoading(false);
     }
   }, [teamId]);
+
+  // 画像ファイルをBase64に変換
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 画像ファイルの処理
+  const handleImageFile = async (file: File) => {
+    // ファイルタイプチェック
+    if (!file.type.startsWith('image/')) {
+      setError('画像ファイルを選択してください');
+      return;
+    }
+
+    // ファイルサイズチェック（5MB制限）
+    if (file.size > 5 * 1024 * 1024) {
+      setError('画像ファイルは5MB以下にしてください');
+      return;
+    }
+
+    setImageUploading(true);
+    setError('');
+
+    try {
+      const base64 = await convertToBase64(file);
+      
+      if (team) {
+        setTeam({ ...team, imageUrl: base64 });
+        setImagePreview(base64);
+      }
+    } catch (error) {
+      console.error('Image conversion error:', error);
+      setError('画像の処理に失敗しました');
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  // ドラッグ&ドロップイベント
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleImageFile(files[0]);
+    }
+  };
+
+  // ファイル選択イベント
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleImageFile(files[0]);
+    }
+  };
+
+  // 画像削除
+  const removeImage = () => {
+    if (team) {
+      setTeam({ ...team, imageUrl: '' });
+      setImagePreview('');
+    }
+  };
 
   useEffect(() => {
     if (status === 'loading' || !teamId) return;
@@ -237,6 +324,109 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
             </div>
           </div>
 
+          {/* 画像アップロード */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900">
+              🖼️ プロジェクト画像
+            </h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* アップロードエリア */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  画像をアップロード
+                </label>
+                
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    isDragOver 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  {imageUploading ? (
+                    <div className="py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <p className="text-sm text-gray-600">アップロード中...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-lg font-medium text-gray-700 mb-2">
+                        画像をドラッグ&ドロップ
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        またはクリックしてファイルを選択
+                      </p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label
+                        htmlFor="image-upload"
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        ファイルを選択
+                      </label>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-3 text-xs text-gray-500">
+                  <p>• 対応形式: JPG, PNG, GIF</p>
+                  <p>• 最大ファイルサイズ: 5MB</p>
+                  <p>• 推奨サイズ: 800×600px</p>
+                </div>
+              </div>
+
+              {/* プレビューエリア */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  プレビュー
+                </label>
+                <div className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50 h-64 flex items-center justify-center">
+                  {imagePreview ? (
+                    <div className="text-center w-full h-full">
+                      <img
+                        src={imagePreview}
+                        alt="プロジェクト画像プレビュー"
+                        className="max-w-full max-h-full object-contain rounded-lg shadow-md mx-auto"
+                        onError={() => setImagePreview('')}
+                      />
+                      <div className="mt-2 flex justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="text-red-600 hover:text-red-800 text-sm underline"
+                        >
+                          画像を削除
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-400">
+                      <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-lg">画像をアップロードすると<br />ここにプレビューが表示されます</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* プロジェクト詳細 */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-900">プロジェクト詳細</h2>
@@ -370,7 +560,7 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || imageUploading}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               {saving ? '保存中...' : '保存'}
