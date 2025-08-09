@@ -22,13 +22,18 @@ export default withAuth(
       // チームIDを取得
       const teamId = pathname.split('/')[2];
       
-      // 管理者または該当チームの発表者のみアクセス可能
+      // 🆕 新しい権限チェック：
+      // - 管理者は常にアクセス可能
+      // - 発表者は自分のチームのみアクセス可能（editingAllowedチェックはページ側で実施）
       const canAccess = token.role === 'admin' || 
                        (token.role === 'presenter' && token.teamId === teamId);
       
       if (!canAccess) {
         return NextResponse.redirect(new URL('/', req.url));
       }
+      
+      // 🆕 発表者の場合は、editingAllowedのチェックはページコンポーネントで行う
+      // （データベースへのアクセスが必要なため、ミドルウェアでは実行しない）
     }
 
     return NextResponse.next();

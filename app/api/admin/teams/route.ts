@@ -115,31 +115,41 @@ export async function DELETE(request: NextRequest) {
     }
     */
 
-    const { searchParams } = new URL(request.url);
-    const teamId = searchParams.get('id');
+    // 🔧 リクエストボディから teamId を取得するよう修正
+    const body = await request.json();
+    console.log('📋 削除リクエストボディ:', body);
+    
+    const { teamId } = body;
 
     if (!teamId) {
+      console.log('❌ チームIDが見つかりません:', { teamId, body });
       return NextResponse.json(
         { success: false, error: 'チームIDが必要です' },
         { status: 400 }
       );
     }
 
+    console.log('🔍 削除対象チーム:', teamId);
     await dbConnect();
 
     const deletedTeam = await Team.findOneAndDelete({ id: teamId });
     if (!deletedTeam) {
+      console.log('❌ チームが見つかりません:', teamId);
       return NextResponse.json(
         { success: false, error: 'チームが見つかりません' },
         { status: 404 }
       );
     }
 
-    console.log('✅ チーム削除成功:', teamId);
+    console.log('✅ チーム削除成功:', teamId, deletedTeam.name);
 
     return NextResponse.json({
       success: true,
-      message: `チーム${deletedTeam.name}を削除しました`
+      message: `チーム「${deletedTeam.name}」を削除しました`,
+      deletedTeam: {
+        id: teamId,
+        name: deletedTeam.name
+      }
     });
 
   } catch (error) {

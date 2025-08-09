@@ -126,12 +126,6 @@ export default function LoginPage() {
               <div className="bg-yellow-50 p-2 rounded border">
                 <strong>🔧 運営:</strong> admin@steamdays.com / password123
               </div>
-              <div className="bg-green-50 p-2 rounded border">
-                <strong>👥 発表者:</strong> team1@steamdays.com / password123
-              </div>
-              <div className="bg-blue-50 p-2 rounded border">
-                <strong>🗳️ 投票者:</strong> voter@steamdays.com / password123
-              </div>
             </div>
           </div>
         </div>

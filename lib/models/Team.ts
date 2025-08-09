@@ -21,7 +21,8 @@ export interface ITeam {
   imageUrl?: string;
   hearts: number;
   comments: IComment[];
-  status?: string; // ← 追加
+  status?: string;
+  editingAllowed?: boolean; // 🆕 編集権限フラグを追加
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -46,10 +47,14 @@ const TeamSchema = new mongoose.Schema<ITeam>({
   imageUrl: { type: String },
   hearts: { type: Number, default: 0 },
   comments: [CommentSchema],
-  status: { // ← 追加
+  status: {
     type: String,
     enum: ['upcoming', 'live', 'ended'],
     default: 'upcoming'
+  },
+  editingAllowed: { // 🆕 編集権限フラグ
+    type: Boolean,
+    default: false // デフォルトは編集不可（安全優先）
   }
 }, {
   timestamps: true

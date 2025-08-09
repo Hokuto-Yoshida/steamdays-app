@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 
 interface Team {
@@ -58,6 +59,7 @@ export default function RegisterPage() {
     try {
       console.log('📝 登録データ送信:', { ...formData, password: '***' });
       
+      // 1. 新規登録
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
@@ -96,10 +98,36 @@ export default function RegisterPage() {
         console.log('✅ 登録成功:', result);
         
         if (result.success) {
-          setSuccess('アカウントが正常に作成されました！ログインページに移動します...');
+          // 🆕 2. 自動ログイン
+          setSuccess('✅ アカウント作成完了！自動ログイン中...');
+          console.log('🔐 自動ログイン開始...');
+          
+          const loginResult = await signIn('credentials', {
+            email: formData.email,
+            password: formData.password,
+            redirect: false, // リダイレクトを無効にして手動制御
+          });
+
+          console.log('🔐 ログイン結果:', loginResult);
+
+          if (loginResult?.error) {
+            // ログインに失敗した場合は手動ログインを促す
+            console.error('❌ 自動ログイン失敗:', loginResult.error);
+            setError('✅ アカウント作成は完了しましたが、自動ログインに失敗しました。手動でログインしてください。');
+            setTimeout(() => {
+              router.push('/auth/login');
+            }, 3000);
+            return;
+          }
+
+          // 🎉 3. 成功時のメッセージとリダイレクト
+          setSuccess('🎉 登録＆ログイン完了！メインページに移動します...');
+          console.log('🎉 自動ログイン成功！メインページに移動...');
+          
           setTimeout(() => {
-            router.push('/auth/login');
-          }, 2000);
+            router.push('/');
+          }, 1500);
+          
         } else {
           setError(result.error || 'アカウント作成に失敗しました');
         }
@@ -167,7 +195,8 @@ export default function RegisterPage() {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 placeholder="田中 太郎"
               />
             </div>
@@ -183,7 +212,8 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 placeholder="your@email.com"
               />
             </div>
@@ -200,7 +230,8 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 required
                 minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 placeholder="6文字以上"
               />
             </div>
@@ -215,7 +246,8 @@ export default function RegisterPage() {
                 value={formData.role}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               >
                 <option value="voter">🗳️ 投票者（観客）</option>
                 <option value="presenter">👥 発表者（チームメンバー）</option>
@@ -233,7 +265,7 @@ export default function RegisterPage() {
                   value={formData.teamId}
                   onChange={handleChange}
                   required
-                  disabled={teamsLoading}
+                  disabled={teamsLoading || loading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 >
                   <option value="">
@@ -259,7 +291,7 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={fetchTeams}
-                      disabled={teamsLoading}
+                      disabled={teamsLoading || loading}
                       className="text-blue-500 hover:text-blue-600 text-sm disabled:text-gray-400"
                     >
                       {teamsLoading ? '更新中...' : '🔄 チーム一覧を更新'}
@@ -274,9 +306,16 @@ export default function RegisterPage() {
               disabled={loading || (formData.role === 'presenter' && teamsLoading)}
               className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:bg-gray-300 transition-colors"
             >
-              {loading ? '⏳ 登録中...' : 'アカウント作成'}
+              {loading ? '⏳ 処理中...' : 'アカウント作成 & ログイン'}
             </button>
           </form>
+
+          {/* 🆕 UX改善の説明 */}
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-blue-700 text-sm text-center">
+              💡 登録後は自動でログインしてメインページに移動します
+            </p>
+          </div>
 
           {/* 役割の説明 */}
           <div className="mt-6 pt-6 border-t border-gray-200">

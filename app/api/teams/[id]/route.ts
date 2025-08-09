@@ -52,26 +52,41 @@ export async function PUT(
       );
     }
 
-    // 権限チェック: 管理者または該当チームの発表者のみ
+    await dbConnect();
+    
+    // チーム情報を取得（editingAllowed フラグをチェックするため）
+    const team = await Team.findOne({ id });
+    if (!team) {
+      return NextResponse.json(
+        { success: false, error: 'Team not found' },
+        { status: 404 }
+      );
+    }
+
+    // 🆕 新しい権限チェック: 管理者または（発表者 + 編集許可ON）
     const canEdit = session.user.role === 'admin' || 
-                   (session.user.role === 'presenter' && session.user.teamId === id);
+                   (session.user.role === 'presenter' && 
+                    session.user.teamId === id && 
+                    team.editingAllowed === true);
     
     if (!canEdit) {
+      const reason = session.user.role === 'presenter' && session.user.teamId === id
+        ? '編集権限が無効になっています。管理者に編集許可を依頼してください。'
+        : '編集権限がありません';
+        
       return NextResponse.json(
-        { success: false, error: 'Permission denied' },
+        { success: false, error: reason },
         { status: 403 }
       );
     }
 
-    await dbConnect();
-    
     const body = await request.json();
     console.log('📝 チーム更新データ受信:', { 
       ...body, 
       imageUrl: body.imageUrl ? `[${body.imageUrl.length} chars]` : 'なし' 
     });
     
-    // 更新可能なフィールドのみを抽出（imageUrl追加）
+    // 更新可能なフィールドのみを抽出（editingAllowedは含めない - APIで別管理）
     const updateData = {
       name: body.name,
       title: body.title,
@@ -81,7 +96,7 @@ export async function PUT(
       members: body.members || [],
       technologies: body.technologies || [],
       scratchUrl: body.scratchUrl || '',
-      imageUrl: body.imageUrl || '', // 🖼️ 画像URL追加
+      imageUrl: body.imageUrl || '',
       updatedAt: new Date()
     };
 
@@ -104,17 +119,11 @@ export async function PUT(
       { new: true, runValidators: true }
     );
 
-    if (!updatedTeam) {
-      return NextResponse.json(
-        { success: false, error: 'Team not found' },
-        { status: 404 }
-      );
-    }
-
     console.log('✅ チーム更新成功:', {
       id: updatedTeam.id,
       name: updatedTeam.name,
-      hasImage: !!updatedTeam.imageUrl
+      hasImage: !!updatedTeam.imageUrl,
+      editingAllowed: updatedTeam.editingAllowed
     });
 
     return NextResponse.json({

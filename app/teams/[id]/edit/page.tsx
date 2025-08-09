@@ -18,6 +18,7 @@ interface Team {
   hearts: number; // ハート数追加
   comments: { reason: string; timestamp: Date; author: string }[]; // コメント追加
   status?: string; // ステータス追加
+  editingAllowed?: boolean; // 🆕 編集権限フラグ追加
 }
 
 export default function TeamEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,12 +44,32 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
     resolveParams();
   }, [params]);
 
-  // 権限チェック
+  // 🆕 新しい権限チェック関数
   const canEdit = useCallback(() => {
-    if (!session?.user || !teamId) return false;
-    return session.user.role === 'admin' || 
-           (session.user.role === 'presenter' && session.user.teamId === teamId);
-  }, [session, teamId]);
+    if (!session?.user || !teamId || !team) return false;
+    
+    // 管理者は常に編集可能
+    if (session.user.role === 'admin') return true;
+    
+    // 発表者の場合：自分のチーム かつ 編集許可がON
+    if (session.user.role === 'presenter' && session.user.teamId === teamId) {
+      return team.editingAllowed === true;
+    }
+    
+    return false;
+  }, [session, teamId, team]);
+
+  // 🆕 権限チェック結果の詳細情報
+  const getPermissionMessage = useCallback(() => {
+    if (!session?.user) return 'ログインが必要です';
+    if (session.user.role === 'admin') return '管理者権限で編集可能です';
+    if (session.user.role === 'presenter' && session.user.teamId === teamId) {
+      return team?.editingAllowed 
+        ? '編集許可が有効です' 
+        : '編集権限が無効になっています。管理者に編集許可を依頼してください。';
+    }
+    return '編集権限がありません';
+  }, [session, teamId, team]);
 
   const fetchTeam = useCallback(async () => {
     if (!teamId) return;
@@ -159,13 +180,17 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
       return;
     }
 
-    if (!canEdit()) {
+    // 🆕 基本的なアクセス権限チェック（詳細は後でteamデータ取得後に実施）
+    const hasBasicAccess = session.user.role === 'admin' || 
+                          (session.user.role === 'presenter' && session.user.teamId === teamId);
+    
+    if (!hasBasicAccess) {
       router.push('/');
       return;
     }
 
     fetchTeam();
-  }, [session, status, teamId, canEdit, fetchTeam, router]);
+  }, [session, status, teamId, fetchTeam, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,6 +286,53 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
     );
   }
 
+  // 🆕 編集不可の場合の表示
+  if (!canEdit() && team) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              チーム編集: {team.name}
+            </h1>
+          </div>
+
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-6 py-4 rounded-lg mb-6">
+            <div className="flex items-center">
+              <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <h3 className="font-semibold">編集権限について</h3>
+                <p className="mt-1">{getPermissionMessage()}</p>
+              </div>
+            </div>
+          </div>
+
+          {session?.user?.role === 'presenter' && session.user.teamId === teamId && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-6 py-4 rounded-lg mb-6">
+              <h3 className="font-semibold mb-2">編集を希望される場合</h3>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>運営スタッフに「チーム編集をしたい」とお声かけください</li>
+                <li>運営スタッフが編集権限を有効にします</li>
+                <li>編集完了後、運営スタッフが権限を無効に戻します</li>
+              </ol>
+            </div>
+          )}
+
+          <div className="flex gap-4 justify-end">
+            <button
+              onClick={() => router.push(`/teams/${teamId}`)}
+              className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              チーム詳細に戻る
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -269,6 +341,12 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
             チーム編集: {team.name}
           </h1>
           <p className="text-gray-600">プロジェクト情報を編集できます</p>
+          {/* 🆕 権限状態の表示 */}
+          <div className="mt-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+              ✅ {getPermissionMessage()}
+            </span>
+          </div>
         </div>
 
         {error && (
@@ -417,7 +495,7 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
                   ) : (
                     <div className="text-center text-gray-400">
                       <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z" />
                       </svg>
                       <p className="text-lg">画像をアップロードすると<br />ここにプレビューが表示されます</p>
                     </div>

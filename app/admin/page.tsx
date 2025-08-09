@@ -14,6 +14,7 @@ interface TeamStats {
   technologies: string[];
   scratchUrl: string;
   status?: string;
+  editingAllowed?: boolean; // 🆕 編集権限フラグ追加
 }
 
 interface UserStats {
@@ -56,6 +57,135 @@ export default function Admin() {
   const [showUserStats, setShowUserStats] = useState(false);
   const [userFilter, setUserFilter] = useState('all');
   const [userSearch, setUserSearch] = useState('');
+
+  // 🆕 編集権限切り替え関数
+  const toggleEditPermission = async (teamId: string, currentStatus: boolean) => {
+    if (!confirm(`チーム${teamId}の編集権限を${currentStatus ? '無効' : '有効'}にしますか？\n\n${
+      currentStatus ? '発表者による編集ができなくなります。' : '発表者が自分で編集できるようになります。'
+    }`)) {
+      return;
+    }
+
+    try {
+      setSetupStatus('🔄 編集権限を変更中...');
+      
+      const response = await fetch(`/api/teams/${teamId}/edit-permission`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          editingAllowed: !currentStatus
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // チームデータを更新
+        setTeams(teams.map(team => 
+          team.id === teamId 
+            ? { ...team, editingAllowed: !currentStatus }
+            : team
+        ));
+        
+        setSetupStatus(`✅ ${result.message}`);
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Edit permission toggle error:', error);
+      setSetupStatus(`❌ 編集権限の変更に失敗しました: ${error}`);
+    }
+  };
+
+  // 🆕 チーム削除関数を追加
+  const deleteTeam = async (teamId: string, teamName: string) => {
+    if (!confirm(`「${teamName}」を削除しますか？\n\nこの操作は取り消せません。\n投票データも同時に削除されます。`)) {
+      return;
+    }
+
+    try {
+      setSetupStatus('🔄 チーム削除中...');
+      
+      const response = await fetch(`/api/admin/teams`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ teamId }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSetupStatus(`✅ チーム「${teamName}」を削除しました`);
+        fetchStats(); // 再読み込み
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Team deletion error:', error);
+      setSetupStatus(`❌ チーム削除に失敗しました: ${error}`);
+    }
+  };
+
+  // 🆕 テストユーザー作成・削除関数（管理画面に追加）
+  const createTestUsers = async (count: number = 100) => {
+    if (!confirm(`${count}人のテストユーザーを作成しますか？\n\nメールアドレス: test1@steamdays.test ～ test${count}@steamdays.test\nパスワード: test123`)) {
+      return;
+    }
+
+    try {
+      setSetupStatus('🏗️ テストユーザー作成中...');
+      
+      const response = await fetch('/api/admin/create-test-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ count, type: 'mixed' }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSetupStatus(`✅ ${result.message}`);
+        fetchStats(); // 再読み込み
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Test users creation error:', error);
+      setSetupStatus(`❌ テストユーザー作成に失敗しました: ${error}`);
+    }
+  };
+
+  const deleteTestUsers = async () => {
+    if (!confirm('全てのテストユーザー（@steamdays.test）を削除しますか？\n\nこの操作は取り消せません。')) {
+      return;
+    }
+
+    try {
+      setSetupStatus('🗑️ テストユーザー削除中...');
+      
+      const response = await fetch('/api/admin/create-test-users', {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSetupStatus(`✅ ${result.message}`);
+        fetchStats(); // 再読み込み
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Test users deletion error:', error);
+      setSetupStatus(`❌ テストユーザー削除に失敗しました: ${error}`);
+    }
+  };
 
   // 統計データの取得
   const fetchStats = async () => {
@@ -444,6 +574,29 @@ export default function Admin() {
                   </svg>
                   カスタムチーム作成
                 </button>
+
+                {/* 🆕 負荷テスト用ボタン */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => createTestUsers(100)}
+                    className="flex items-center gap-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                    テストユーザー作成 (100人)
+                  </button>
+
+                  <button
+                    onClick={deleteTestUsers}
+                    className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    テストユーザー削除
+                  </button>
+                </div>
               </div>
 
               {/* 個別作成フォーム */}
@@ -533,7 +686,8 @@ export default function Admin() {
                             メンバー: {team.members.join(', ') || '未設定'}
                           </p>
                         </div>
-                        <div className="ml-4">
+                        <div className="ml-4 flex items-center gap-2">
+                          {/* ステータス変更ドロップダウン */}
                           <select
                             value={team.status || 'upcoming'}
                             onChange={(e) => handleTeamStatusChange(team.id, e.target.value)}
@@ -544,6 +698,31 @@ export default function Admin() {
                             <option value="ended">終了</option>
                           </select>
                         </div>
+                      </div>
+
+                      {/* ステータスバッジ表示 */}
+                      <div className="flex items-center gap-2 mb-3">
+                        {/* ピッチステータス */}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          team.status === 'live' 
+                            ? 'bg-red-100 text-red-800 animate-pulse' 
+                            : team.status === 'ended'
+                            ? 'bg-gray-100 text-gray-600'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {team.status === 'live' && '🔴 ライブ中'}
+                          {team.status === 'ended' && '⏹️ 終了'}
+                          {team.status === 'upcoming' && '⏳ 開始前'}
+                        </span>
+                        
+                        {/* 🆕 編集権限ステータス */}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          team.editingAllowed
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {team.editingAllowed ? '✏️ 編集可能' : '🔒 編集不可'}
+                        </span>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 p-3 bg-white rounded-lg border mb-3">
@@ -577,6 +756,43 @@ export default function Admin() {
                           </svg>
                           管理者編集
                         </Link>
+                        
+                        {/* 🆕 編集権限切り替えボタン */}
+                        <button
+                          onClick={() => toggleEditPermission(team.id, team.editingAllowed || false)}
+                          className={`flex items-center gap-1 px-3 py-1 text-sm rounded transition-colors ${
+                            team.editingAllowed
+                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          }`}
+                          title={team.editingAllowed ? '発表者の編集権限を無効にする' : '発表者の編集権限を有効にする'}
+                        >
+                          {team.editingAllowed ? (
+                            <>
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m6-6V7a4 4 0 00-8 0v4m-1 0h10a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2z" />
+                              </svg>
+                              編集禁止
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m0-6V9a4 4 0 00-8 0v2m0 6h16" />
+                              </svg>
+                              編集許可
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => deleteTeam(team.id, team.name)}
+                          className="flex items-center gap-1 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+                          title="チームを削除"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          削除
+                        </button>
                       </div>
                     </div>
                   ))}
