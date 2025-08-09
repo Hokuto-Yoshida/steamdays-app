@@ -14,7 +14,7 @@ interface TeamStats {
   technologies: string[];
   scratchUrl: string;
   status?: string;
-  editingAllowed?: boolean; // 🆕 編集権限フラグ追加
+  editingAllowed?: boolean;
 }
 
 interface UserStats {
@@ -31,7 +31,6 @@ interface UserStats {
 interface AdminStats {
   totalTeams: number;
   totalVotes: number;
-  totalComments: number;
   topTeam: { name: string; hearts: number } | null;
   activeUsers: number;
 }
@@ -48,7 +47,6 @@ export default function Admin() {
   const [teamCreating, setTeamCreating] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [newTeamData, setNewTeamData] = useState({
-    id: '',
     name: '',
     title: ''
   });
@@ -99,7 +97,7 @@ export default function Admin() {
     }
   };
 
-  // 🆕 チーム削除関数を追加
+  // チーム削除関数
   const deleteTeam = async (teamId: string, teamName: string) => {
     if (!confirm(`「${teamName}」を削除しますか？\n\nこの操作は取り消せません。\n投票データも同時に削除されます。`)) {
       return;
@@ -130,63 +128,6 @@ export default function Admin() {
     }
   };
 
-  // 🆕 テストユーザー作成・削除関数（管理画面に追加）
-  const createTestUsers = async (count: number = 100) => {
-    if (!confirm(`${count}人のテストユーザーを作成しますか？\n\nメールアドレス: test1@steamdays.test ～ test${count}@steamdays.test\nパスワード: test123`)) {
-      return;
-    }
-
-    try {
-      setSetupStatus('🏗️ テストユーザー作成中...');
-      
-      const response = await fetch('/api/admin/create-test-users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ count, type: 'mixed' }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setSetupStatus(`✅ ${result.message}`);
-        fetchStats(); // 再読み込み
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error('Test users creation error:', error);
-      setSetupStatus(`❌ テストユーザー作成に失敗しました: ${error}`);
-    }
-  };
-
-  const deleteTestUsers = async () => {
-    if (!confirm('全てのテストユーザー（@steamdays.test）を削除しますか？\n\nこの操作は取り消せません。')) {
-      return;
-    }
-
-    try {
-      setSetupStatus('🗑️ テストユーザー削除中...');
-      
-      const response = await fetch('/api/admin/create-test-users', {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setSetupStatus(`✅ ${result.message}`);
-        fetchStats(); // 再読み込み
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error('Test users deletion error:', error);
-      setSetupStatus(`❌ テストユーザー削除に失敗しました: ${error}`);
-    }
-  };
-
   // 統計データの取得
   const fetchStats = async () => {
     setRefreshing(true);
@@ -200,7 +141,6 @@ export default function Admin() {
           setTeams(teamsData);
           
           const totalVotes = teamsData.reduce((sum: number, team: TeamStats) => sum + team.hearts, 0);
-          const totalComments = teamsData.reduce((sum: number, team: TeamStats) => sum + (team.comments?.length || 0), 0);
           
           // topTeamの安全な取得
           let topTeam: { name: string; hearts: number } | null = null;
@@ -211,7 +151,7 @@ export default function Admin() {
             topTeam = { name: maxHeartsTeam.name, hearts: maxHeartsTeam.hearts };
           }
 
-          // ユーザーデータ取得（修正版）
+          // ユーザーデータ取得
           const usersResponse = await fetch('/api/users');
           let activeUsersCount = 0;
           
@@ -232,7 +172,6 @@ export default function Admin() {
           const statsData: AdminStats = {
             totalTeams: teamsData.length,
             totalVotes: totalVotes,
-            totalComments: totalComments,
             topTeam: topTeam,
             activeUsers: activeUsersCount
           };
@@ -247,26 +186,33 @@ export default function Admin() {
     }
   };
 
-  // チーム作成関数
+  // チーム作成関数（IDは自動生成）
   const createTeam = async () => {
-    if (!newTeamData.id || !newTeamData.name) {
-      alert('チームIDと名前は必須です');
+    if (!newTeamData.name) {
+      alert('チーム名は必須です');
       return;
     }
 
     setTeamCreating(true);
     try {
+      // IDは既存チーム数+1で自動生成
+      const newId = (teams.length + 1).toString();
+      
       const response = await fetch('/api/admin/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTeamData)
+        body: JSON.stringify({
+          id: newId,
+          name: newTeamData.name,
+          title: newTeamData.title
+        })
       });
 
       const result = await response.json();
       
       if (result.success) {
         setSetupStatus(`✅ ${result.message}`);
-        setNewTeamData({ id: '', name: '', title: '' });
+        setNewTeamData({ name: '', title: '' });
         setShowCreateTeam(false);
         fetchStats(); // 再読み込み
       } else {
@@ -496,8 +442,8 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 統計カード */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* 統計カード（コメント数削除、3列レイアウト） */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm border p-6 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">総投票数</p>
@@ -515,16 +461,6 @@ export default function Admin() {
             </div>
             <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">総コメント数</p>
-              <p className="text-3xl font-bold text-gray-900">{stats?.totalComments || 0}</p>
-            </div>
-            <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
 
@@ -572,50 +508,15 @@ export default function Admin() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  カスタムチーム作成
+                  新しいチーム作成
                 </button>
-
-                {/* 🆕 負荷テスト用ボタン */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => createTestUsers(100)}
-                    className="flex items-center gap-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                    テストユーザー作成 (100人)
-                  </button>
-
-                  <button
-                    onClick={deleteTestUsers}
-                    className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    テストユーザー削除
-                  </button>
-                </div>
               </div>
 
-              {/* 個別作成フォーム */}
+              {/* 個別作成フォーム（IDフィールド削除） */}
               {showCreateTeam && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
                   <h3 className="text-lg font-semibold mb-3">新しいチーム作成</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        チームID *
-                      </label>
-                      <input
-                        type="text"
-                        value={newTeamData.id}
-                        onChange={(e) => setNewTeamData({...newTeamData, id: e.target.value})}
-                        placeholder="1, 2, 3..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         チーム名 *
@@ -715,7 +616,7 @@ export default function Admin() {
                           {team.status === 'upcoming' && '⏳ 開始前'}
                         </span>
                         
-                        {/* 🆕 編集権限ステータス */}
+                        {/* 編集権限ステータス */}
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           team.editingAllowed
                             ? 'bg-green-100 text-green-800'
@@ -757,7 +658,7 @@ export default function Admin() {
                           管理者編集
                         </Link>
                         
-                        {/* 🆕 編集権限切り替えボタン */}
+                        {/* 編集権限切り替えボタン */}
                         <button
                           onClick={() => toggleEditPermission(team.id, team.editingAllowed || false)}
                           className={`flex items-center gap-1 px-3 py-1 text-sm rounded transition-colors ${
