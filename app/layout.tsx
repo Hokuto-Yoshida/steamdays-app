@@ -6,7 +6,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'STEAM DAYS!! - 最終コンテスト',
+  title: 'STEAMDAYS!!!! - 最終コンテスト',
   description: '精神発達障害と自分らしい個性の生かし方をテーマとした中高生プログラムの最終発表会',
 };
 

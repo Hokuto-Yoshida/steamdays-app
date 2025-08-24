@@ -373,7 +373,7 @@ export default function Home() {
       {/* フッター */}
       <footer className="bg-gray-50 border-t mt-16 py-8">
         <div className="max-w-6xl mx-auto px-4 text-center text-gray-600">
-          <p>STEAM DAYS 2025 - 精神発達障害と自分らしい個性の生かし方</p>
+          <p>STEAMDAYS!! 2025 - 精神発達障害と自分らしい個性の生かし方</p>
           <p className="text-sm mt-2">各チームのプロジェクトを体験して、チャットで交流しよう！</p>
         </div>
       </footer>

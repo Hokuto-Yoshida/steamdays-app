@@ -160,7 +160,7 @@ export default function RegisterPage() {
         {/* ロゴ・タイトル */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            STEAM DAYS!!
+            STEAMDAYS!!!!
           </h1>
           <p className="text-gray-600">新規アカウント作成</p>
         </div>
@@ -310,13 +310,6 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          {/* 🆕 UX改善の説明 */}
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-blue-700 text-sm text-center">
-              💡 登録後は自動でログインしてメインページに移動します
-            </p>
-          </div>
-
           {/* 役割の説明 */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <h3 className="text-sm font-medium text-gray-700 mb-3">役割について</h3>
@@ -327,10 +320,6 @@ export default function RegisterPage() {
               <div className="bg-green-50 p-2 rounded border">
                 <strong>👥 発表者:</strong> 自分のチームのプロジェクト編集と投票ができます
               </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-500">
-              <p>※ 管理者アカウントは運営によって別途作成されます</p>
-              <p>※ チームが表示されない場合は、管理者がまだチームを作成していない可能性があります</p>
             </div>
           </div>
 

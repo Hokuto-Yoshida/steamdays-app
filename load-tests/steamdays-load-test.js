@@ -214,7 +214,7 @@ export default function() {
 
 // セットアップ関数
 export function setup() {
-  console.log('🚀 STEAM DAYS 負荷テスト開始');
+  console.log('🚀 STEAMDAYS!! 負荷テスト開始');
   console.log(`📊 テスト対象: ${BASE_URL}`);
   console.log('📈 想定テストユーザー: 1-100番');
   

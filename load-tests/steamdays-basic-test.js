@@ -35,7 +35,7 @@ export default function() {
   check(homeResponse, {
     'ホームページが正常に表示': (r) => r.status === 200,
     'ホームページが2秒以内': (r) => r.timings.duration < 2000,
-    'STEAM DAYSという文字が含まれる': (r) => r.body.includes('STEAM DAYS'),
+    'STEAMDAYS!!という文字が含まれる': (r) => r.body.includes('STEAMDAYS!!'),
   });
   
   // 少し待つ（実際のユーザーがページを見る時間）
@@ -96,7 +96,7 @@ export default function() {
 }
 
 export function setup() {
-  console.log('🚀 STEAM DAYS シンプル負荷テスト開始');
+  console.log('🚀 STEAMDAYS!! シンプル負荷テスト開始');
   console.log(`📊 テスト対象: ${BASE_URL}`);
   console.log('👥 最大100人の同時アクセスをシミュレート');
   console.log('📋 テスト内容:');

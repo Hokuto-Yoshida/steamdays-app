@@ -2,88 +2,126 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 
 export default function LandingPage() {
   const [currentFeature, setCurrentFeature] = useState(0);
 
+  // ロゴのカラーパレットに合わせたグラデーションを inline style で指定
   const features = [
     {
       icon: '🎯',
       title: 'プロジェクト体験',
       description: '中高生が4ヶ月間かけて開発したプロジェクトを実際に体験できます',
-      color: 'from-blue-500 to-cyan-400'
+      gradient: 'linear-gradient(90deg,#60A5FA,#34D399)' // blue -> green
     },
     {
       icon: '💖',
       title: 'リアルタイム投票',
       description: '気に入ったプロジェクトにハートを送って応援メッセージを届けよう',
-      color: 'from-red-500 to-pink-400'
+      gradient: 'linear-gradient(90deg,#FB7185,#FDBAFA)' // pink-ish
     },
     {
       icon: '💬',
       title: 'ライブチャット',
       description: '参加者全員でリアルタイムに交流・感想を共有できます',
-      color: 'from-purple-500 to-indigo-400'
+      gradient: 'linear-gradient(90deg,#A78BFA,#60A5FA)' // purple -> blue
     },
     {
       icon: '🏆',
       title: 'オーディエンス賞',
       description: '皆さんの投票で最も支持されたプロジェクトが選ばれます',
-      color: 'from-yellow-500 to-orange-400'
+      gradient: 'linear-gradient(90deg,#FBBF24,#FB923C)' // yellow -> orange
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      {/* ヒーローセクション */}
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white text-gray-900">
+      {/* ヒーロー */}
       <section className="relative overflow-hidden">
-        {/* 背景装飾 */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-pink-400/20 to-orange-400/20 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative max-w-6xl mx-auto px-4 py-16 sm:py-24">
+        <div className="relative max-w-6xl mx-auto px-4 py-12 sm:py-16">
           <div className="text-center">
             {/* ロゴ・タイトル */}
-            <div className="mb-8">
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-4">
-                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  STEAM DAYS!!
-                </span>
-              </h1>
-              <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mb-6"></div>
-              <p className="text-xl sm:text-2xl text-gray-700 font-medium">
+            <div className="mb-6 flex flex-col items-center gap-3">
+              <div className="relative flex items-center justify-center">
+
+                {/* カラフルなリングのプレート - 輪郭（薄いシャドウ） */}
+                <div
+                  aria-hidden
+                  className="absolute rounded-full"
+                  style={{
+                    width: 250,
+                    height: 250,
+                    zIndex: 1,
+                    background: 'transparent',
+                  }}
+                />
+
+                {/* 白プレート（ロゴ本体） */}
+                <div
+                  className="relative rounded-full flex items-center justify-center"
+                  style={{
+                    width: 220,
+                    height: 220,
+                    background: '#ffffff',
+                    zIndex: 2,
+                    border: '6px solid rgba(255,255,255,0.9)'
+                  }}
+                >
+                  <Image
+                    src="/images/steamdays-logo.png"
+                    alt="STEAM DAYS ロゴ"
+                    width={180}
+                    height={180}
+                    className="object-contain"
+                    priority
+                  />
+                </div>
+              </div>
+
+              {/* キャプション */}
+              <p className="text-base sm:text-lg text-gray-700 font-medium mt-2">
                 最終コンテスト 投票システム
               </p>
             </div>
 
             {/* サブタイトル */}
-            <div className="mb-12">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
+            <div className="mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">
                 精神発達障害と自分らしい個性の生かし方
               </h2>
               <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                中高生が4ヶ月間かけて取り組んだプロジェクトを体験し、<br className="hidden sm:inline" />
+                中高生が4ヶ月間かけて取り組んだプロジェクトを体験し、
+                <br className="hidden sm:inline" />
                 気に入った作品に投票してオーディエンス賞を決めよう！
               </p>
             </div>
 
-            {/* CTAボタン */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+            {/* CTAボタン（ロゴの多色を使ったグラデ） */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Link
                 href="/auth/login"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
+                className="text-white px-8 py-4 rounded-full font-semibold text-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
+                style={{
+                  background:
+                    'linear-gradient(90deg,#60A5FA 0%, #A78BFA 35%, #FB7185 65%, #FBBF24 100%)'
+                }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                 </svg>
                 ログインして参加
               </Link>
+
               <Link
                 href="/auth/register"
-                className="border-2 border-purple-600 text-purple-600 px-8 py-4 rounded-full font-semibold text-lg hover:bg-purple-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-2"
+                className="px-8 py-4 rounded-full font-semibold text-lg hover:bg-white transition-all duration-200 flex items-center justify-center gap-2"
+                style={{
+                  border: '2px solid rgba(167,139,250,0.9)',
+                  color: '#7C3AED',
+                  background: 'white'
+                }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -96,28 +134,31 @@ export default function LandingPage() {
       </section>
 
       {/* 機能紹介セクション */}
-      <section className="py-16 bg-white/50 backdrop-blur-sm">
+      <section className="py-16 bg-white">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">
               🌟 体験できること
             </h2>
             <p className="text-lg text-gray-600">
-              STEAM DAYSの投票システムで楽しめる機能をご紹介
+              STEAMDAYS!!の投票システムで楽しめる機能をご紹介
             </p>
           </div>
 
-          {/* 機能カード */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {features.map((feature, index) => (
               <div
                 key={index}
-                className={`relative p-6 rounded-2xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer ${
-                  currentFeature === index ? 'ring-4 ring-purple-300' : ''
-                }`}
+                className={`relative p-6 rounded-2xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer`}
                 onClick={() => setCurrentFeature(index)}
               >
-                <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${feature.color} flex items-center justify-center text-2xl mb-4 shadow-lg`}>
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-4 shadow-lg"
+                  style={{
+                    background: feature.gradient,
+                    color: 'white'
+                  }}
+                >
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">
@@ -130,10 +171,15 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* 選択された機能の詳細表示 */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="flex items-center gap-4 mb-6">
-              <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${features[currentFeature].color} flex items-center justify-center text-3xl shadow-lg`}>
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-lg"
+                style={{
+                  background: features[currentFeature].gradient,
+                  color: 'white'
+                }}
+              >
                 {features[currentFeature].icon}
               </div>
               <div>
@@ -146,7 +192,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* 機能別の詳細説明 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {currentFeature === 0 && (
                 <>
@@ -308,54 +353,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 参加方法セクション */}
-      <section className="py-16">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">
-              🚀 参加方法
-            </h2>
-            <p className="text-lg text-gray-600">
-              3つの簡単なステップで参加できます
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4 shadow-lg">
-                1
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">アカウント作成</h3>
-              <p className="text-gray-600">
-                メールアドレスとお名前で簡単登録
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-400 rounded-full flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4 shadow-lg">
-                2
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">プロジェクト体験</h3>
-              <p className="text-gray-600">
-                各チームの作品を実際に操作・体験
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-400 rounded-full flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4 shadow-lg">
-                3
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">投票・交流</h3>
-              <p className="text-gray-600">
-                ハートを送って感想を共有・チャットで交流
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTAセクション */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+      <section className="py-16" style={{ background: 'linear-gradient(90deg,#60A5FA 0%, #A78BFA 40%, #FB7185 70%, #FBBF24 100%)' }}>
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8">
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
@@ -371,18 +370,12 @@ export default function LandingPage() {
                 href="/auth/register"
                 className="bg-white text-purple-600 px-8 py-4 rounded-full font-bold text-lg hover:bg-purple-50 transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
                 新規登録して始める
               </Link>
               <Link
                 href="/auth/login"
                 className="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-purple-600 transition-all duration-200 flex items-center justify-center gap-2"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                </svg>
                 既存アカウントでログイン
               </Link>
             </div>
@@ -390,13 +383,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* フッター */}
       <footer className="bg-gray-800 text-white py-8">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center">
-            <h3 className="text-2xl font-bold mb-2">STEAM DAYS 2025</h3>
+            <h3 className="text-2xl font-bold mb-2">STEAMDAYS!! 2025</h3>
             <p className="text-gray-400 mb-4">精神発達障害と自分らしい個性の生かし方</p>
-            <div className="w-16 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mb-4"></div>
+
+            {/* フッターのアクセントラインを多色グラデに */}
+            <div className="w-20 h-1 mx-auto mb-4" style={{ background: 'linear-gradient(90deg,#60A5FA,#A78BFA,#FB7185,#FBBF24)' }} />
+
             <p className="text-sm text-gray-500">
               中高生の「好き」と「やりたい」を社会課題解決につなげるプログラム
             </p>

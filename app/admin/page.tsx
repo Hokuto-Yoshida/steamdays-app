@@ -404,7 +404,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar 
-        title="🔧 STEAM DAYS 運営管理"
+        title="🔧 STEAMDAYS!! 運営管理"
         showBackButton={true}
         backUrl="/"
       />
@@ -419,7 +419,7 @@ export default function Admin() {
               </svg>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">STEAM DAYS 運営ダッシュボード</h1>
+              <h1 className="text-3xl font-bold text-gray-900">STEAMDAYS!! 運営ダッシュボード</h1>
               <p className="text-gray-600">最終コンテスト投票システム管理</p>
             </div>
           </div>
@@ -998,7 +998,7 @@ export default function Admin() {
 
         {/* フッター */}
         <div className="mt-8 text-center text-gray-500 text-sm">
-          <p>STEAM DAYS 2025 - 運営管理システム</p>
+          <p>STEAMDAYS!! 2025 - 運営管理システム</p>
           <p>中高生の「好き」と「やりたい」を社会課題解決につなげるプログラム</p>
         </div>
       </div>

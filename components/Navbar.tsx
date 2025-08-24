@@ -9,7 +9,7 @@ interface NavbarProps {
   backUrl?: string;
 }
 
-export default function Navbar({ title = 'STEAM DAYS!!', showBackButton = false, backUrl = '/' }: NavbarProps) {
+export default function Navbar({ title = 'STEAMDAYS!!!!', showBackButton = false, backUrl = '/' }: NavbarProps) {
   const { data: session, status } = useSession();
 
   const getRoleDisplayName = (role: string) => {

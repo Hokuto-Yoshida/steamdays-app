@@ -62,7 +62,7 @@ export default function LoginPage() {
         {/* ロゴ・タイトル */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            STEAM DAYS!!
+            STEAMDAYS!!!!
           </h1>
           <p className="text-gray-600">ログインしてアクセス</p>
         </div>
@@ -118,16 +118,6 @@ export default function LoginPage() {
               {loading ? '⏳ ログイン中...' : 'ログイン'}
             </button>
           </form>
-
-          {/* デモアカウント情報 */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">デモアカウント</h3>
-            <div className="space-y-2 text-xs">
-              <div className="bg-yellow-50 p-2 rounded border">
-                <strong>🔧 運営:</strong> admin@steamdays.com / password123
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* 新規登録リンク */}

@@ -1,6 +1,6 @@
-# STEAM DAYS 負荷テスト実行スクリプト (Windows PowerShell)
+# STEAMDAYS!! 負荷テスト実行スクリプト (Windows PowerShell)
 
-Write-Host "🚀 STEAM DAYS 負荷テスト実行スクリプト" -ForegroundColor Green
+Write-Host "🚀 STEAMDAYS!! 負荷テスト実行スクリプト" -ForegroundColor Green
 
 # 設定
 $BASE_URL = "https://steamdays-app.onrender.com"

@@ -20,7 +20,7 @@ export default function() {
   const result = check(response, {
     'ホームページが正常に表示される': (r) => r.status === 200,
     'レスポンス時間が3秒以内': (r) => r.timings.duration < 3000,
-    'STEAM DAYSの文字が含まれる': (r) => r.body.includes('STEAM DAYS'),
+    'STEAMDAYS!!の文字が含まれる': (r) => r.body.includes('STEAMDAYS!!'),
   });
   
   if (result) {
