@@ -226,42 +226,6 @@ export default function Admin() {
     }
   };
 
-  // デフォルトチーム一括作成
-  const createDefaultTeams = async () => {
-    const defaultTeams = [
-      { id: '1', name: 'チーム1 - コネクト', title: '' },
-      { id: '2', name: 'チーム2 - ハーモニー', title: '' },
-      { id: '3', name: 'チーム3 - エンパワー', title: '' },
-      { id: '4', name: 'チーム4 - サポート', title: '' },
-      { id: '5', name: 'チーム5 - クリエイト', title: '' },
-      { id: '6', name: 'チーム6 - ブリッジ', title: '' }
-    ];
-
-    setTeamCreating(true);
-    let successCount = 0;
-    
-    for (const team of defaultTeams) {
-      try {
-        const response = await fetch('/api/admin/teams', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(team)
-        });
-
-        const result = await response.json();
-        if (result.success) {
-          successCount++;
-        }
-      } catch (error) {
-        console.error(`Error creating team ${team.id}:`, error);
-      }
-    }
-
-    setSetupStatus(`✅ ${successCount}個のチームを作成しました`);
-    setTeamCreating(false);
-    fetchStats(); // 再読み込み
-  };
-
   // ユーザーステータス切り替え
   const toggleUserStatus = async (userId: string, newStatus: boolean) => {
     if (!confirm(`このユーザーを${newStatus ? '有効' : '無効'}にしますか？`)) {
@@ -410,30 +374,6 @@ export default function Admin() {
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* ヘッダー */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">STEAMDAYS!! 運営ダッシュボード</h1>
-              <p className="text-gray-600">最終コンテスト投票システム管理</p>
-            </div>
-          </div>
-          <button
-            onClick={fetchStats}
-            disabled={refreshing}
-            className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-300 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            {refreshing ? '更新中...' : '最新情報に更新'}
-          </button>
-        </div>
 
         {/* ステータス表示 */}
         {setupStatus && (
@@ -488,18 +428,6 @@ export default function Admin() {
             {/* チーム作成機能 */}
             <div className="p-6 border-b border-gray-200">
               <div className="flex flex-col sm:flex-row gap-4">
-                {/* 一括作成ボタン */}
-                <button
-                  onClick={createDefaultTeams}
-                  disabled={teamCreating || teams.length > 0}
-                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  {teamCreating ? '作成中...' : 'デフォルトチーム作成 (1-6)'}
-                </button>
-
                 {/* 個別作成ボタン */}
                 <button
                   onClick={() => setShowCreateTeam(!showCreateTeam)}

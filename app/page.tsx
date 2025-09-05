@@ -284,14 +284,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* ハート数バッジ */}
-                  <div className="absolute bottom-3 right-3">
-                    <div className="bg-red-500/90 backdrop-blur-sm text-white px-2 py-1 rounded-full flex items-center gap-1 text-sm font-medium shadow-sm">
-                      <span>❤️</span>
-                      <span>{team.hearts}</span>
-                    </div>
-                  </div>
-
                   {/* チーム画像の中央アイコン（画像がない場合） */}
                   {(!team.imageUrl || imageErrors.has(team.id)) && (
                     <div className="absolute inset-0 flex items-center justify-center">

@@ -98,13 +98,6 @@ export default function Ranking() {
         {/* 最終更新時刻とソート情報 */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="font-medium text-gray-700">並び順:</span>
-              <div className="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-md">
-                <span>❤️</span>
-                <span className="font-medium">ハート数順</span>
-              </div>
-            </div>
             <div className="text-sm text-gray-500 flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -203,28 +196,6 @@ export default function Ranking() {
             <p className="text-gray-600">投票が開始されるとランキングが表示されます</p>
           </div>
         )}
-
-        {/* 投票を促すCTA */}
-        <div className="mt-12 bg-gradient-to-r from-red-500 to-pink-600 rounded-lg shadow-lg p-8 text-white text-center">
-          <h3 className="text-2xl font-bold mb-4 flex items-center justify-center gap-2">
-            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-            まだ投票していませんか？
-          </h3>
-          <p className="mb-6 text-red-100">
-            気に入ったプロジェクトにハートを送って、応援メッセージと一緒にオーディエンス賞の選考に参加しましょう！
-          </p>
-          <Link
-            href="/"
-            className="bg-white text-red-600 px-8 py-3 rounded-md font-semibold hover:bg-red-50 transition-colors inline-flex items-center gap-2 shadow-md hover:shadow-lg"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            プロジェクト一覧を見る
-          </Link>
-        </div>
       </main>
     </div>
   );
