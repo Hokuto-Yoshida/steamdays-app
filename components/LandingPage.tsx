@@ -89,7 +89,7 @@ export default function LandingPage() {
             {/* サブタイトル */}
             <div className="mb-8">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">
-                精神発達障害と自分らしい個性の生かし方
+                中高生の「好き」と「やりたい」を社会課題解決につなげるプログラム
               </h2>
               <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
                 中高生が4ヶ月間かけて取り組んだプロジェクトを体験し、
@@ -386,15 +386,10 @@ export default function LandingPage() {
       <footer className="bg-gray-800 text-white py-8">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center">
-            <h3 className="text-2xl font-bold mb-2">STEAMDAYS!! 2025</h3>
-            <p className="text-gray-400 mb-4">精神発達障害と自分らしい個性の生かし方</p>
+            <h3 className="text-2xl font-bold mb-2">STEAMDAYS!!</h3>
 
             {/* フッターのアクセントラインを多色グラデに */}
             <div className="w-20 h-1 mx-auto mb-4" style={{ background: 'linear-gradient(90deg,#60A5FA,#A78BFA,#FB7185,#FBBF24)' }} />
-
-            <p className="text-sm text-gray-500">
-              中高生の「好き」と「やりたい」を社会課題解決につなげるプログラム
-            </p>
           </div>
         </div>
       </footer>

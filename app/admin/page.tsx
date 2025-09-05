@@ -998,7 +998,7 @@ export default function Admin() {
 
         {/* フッター */}
         <div className="mt-8 text-center text-gray-500 text-sm">
-          <p>STEAMDAYS!! 2025 - 運営管理システム</p>
+          <p>STEAMDAYS!! - 運営管理システム</p>
           <p>中高生の「好き」と「やりたい」を社会課題解決につなげるプログラム</p>
         </div>
       </div>

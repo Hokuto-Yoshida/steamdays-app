@@ -51,12 +51,16 @@ export default function Navbar({ title = 'STEAMDAYS!!!!', showBackButton = false
               >
                 ホーム
               </Link>
-              <Link
-                href="/ranking"
-                className="text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                ランキング
-              </Link>
+              
+              {/* ランキングは管理者のみ表示 */}
+              {session?.user?.role === 'admin' && (
+                <Link
+                  href="/ranking"
+                  className="text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  ランキング
+                </Link>
+              )}
               
               {/* ロール別リンク */}
               {session?.user?.role === 'admin' && (
@@ -124,7 +128,12 @@ export default function Navbar({ title = 'STEAMDAYS!!!!', showBackButton = false
         <nav className="md:hidden mt-4 pt-4 border-t border-gray-200">
           <div className="flex flex-wrap gap-4">
             <Link href="/" className="text-gray-600 hover:text-gray-800">ホーム</Link>
-            <Link href="/ranking" className="text-gray-600 hover:text-gray-800">ランキング</Link>
+            
+            {/* モバイルでもランキングは管理者のみ */}
+            {session?.user?.role === 'admin' && (
+              <Link href="/ranking" className="text-gray-600 hover:text-gray-800">ランキング</Link>
+            )}
+            
             {session?.user?.role === 'admin' && (
               <Link href="/admin" className="text-red-600 hover:text-red-800 font-medium">管理</Link>
             )}

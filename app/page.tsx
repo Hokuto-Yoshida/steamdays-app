@@ -158,6 +158,49 @@ export default function Home() {
           </p>
         </div>
 
+        {/* オーディエンス賞セクション - 上部に移動 */}
+        <div className="mb-8 bg-white rounded-lg shadow-md p-8 text-center">
+          <h3 className="text-2xl font-semibold mb-4 text-gray-800">🏆 オーディエンス賞</h3>
+          <p className="text-gray-600 mb-6">
+            皆さんの投票で最も支持されたプロジェクトが選ばれます！<br />
+            気に入ったプロジェクトにハートを押して、理由や感想も教えてください。
+          </p>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 inline-block">
+            <p className="text-yellow-800 font-medium flex items-center gap-2 justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              各プロジェクトページで実際にアプリを体験できます
+            </p>
+          </div>
+        </div>
+
+        {/* チャット利用ガイド - 上部に移動 */}
+        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h4 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            全体チャットをご活用ください
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+            <div className="flex items-start gap-2">
+              <span className="text-blue-500">💬</span>
+              <div>
+                <p className="font-medium">リアルタイム交流</p>
+                <p className="text-blue-600">他の参加者とリアルタイムでやり取りできます</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-500">🤝</span>
+              <div>
+                <p className="font-medium">感想や質問を共有</p>
+                <p className="text-blue-600">プロジェクトについての感想や質問を気軽に投稿しましょう</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ライブ中のチーム専用セクション */}
         {teams.some(team => team.status === 'live') && (
           <div className="mb-8 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg shadow-lg p-6 text-white">
@@ -325,55 +368,12 @@ export default function Home() {
             <p className="text-gray-600">管理者がチームを作成するとここに表示されます</p>
           </div>
         )}
-
-        {/* オーディエンス賞セクション */}
-        <div className="mt-16 bg-white rounded-lg shadow-md p-8 text-center">
-          <h3 className="text-2xl font-semibold mb-4 text-gray-800">🏆 オーディエンス賞</h3>
-          <p className="text-gray-600 mb-6">
-            皆さんの投票で最も支持されたプロジェクトが選ばれます！<br />
-            気に入ったプロジェクトにハートを押して、理由や感想も教えてください。
-          </p>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 inline-block">
-            <p className="text-yellow-800 font-medium flex items-center gap-2 justify-center">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              各プロジェクトページで実際にアプリを体験できます
-            </p>
-          </div>
-        </div>
-
-        {/* チャット利用ガイド */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h4 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            全体チャットをご活用ください
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
-            <div className="flex items-start gap-2">
-              <span className="text-blue-500">💬</span>
-              <div>
-                <p className="font-medium">リアルタイム交流</p>
-                <p className="text-blue-600">他の参加者とリアルタイムでやり取りできます</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-500">🤝</span>
-              <div>
-                <p className="font-medium">感想や質問を共有</p>
-                <p className="text-blue-600">プロジェクトについての感想や質問を気軽に投稿しましょう</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </main>
 
       {/* フッター */}
       <footer className="bg-gray-50 border-t mt-16 py-8">
         <div className="max-w-6xl mx-auto px-4 text-center text-gray-600">
-          <p>STEAMDAYS!! 2025 - 精神発達障害と自分らしい個性の生かし方</p>
+          <p>STEAMDAYS!!</p>
           <p className="text-sm mt-2">各チームのプロジェクトを体験して、チャットで交流しよう！</p>
         </div>
       </footer>

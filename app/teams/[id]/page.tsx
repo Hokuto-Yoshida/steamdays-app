@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateClientId, hasVotedForTeam, markTeamAsVoted } from '@/lib/utils/client';
 import Navbar from '@/components/Navbar';
+import TeamChat from '@/components/TeamChat';
+import { useSession } from 'next-auth/react';
 
-// TypeScript型定義
 interface Comment {
   reason: string;
   timestamp: string;
@@ -28,28 +29,20 @@ interface Team {
   comments: Comment[];
 }
 
-// Scratch埋め込みURL変換関数
 function getScratchEmbedUrl(url: string): string {
   if (!url) return '';
-  
-  // 既に埋め込みURLの場合はそのまま返す
-  if (url.includes('/embed')) {
-    return url;
-  }
-  
-  // 通常のScratchプロジェクトURLから埋め込みURLを生成
+  if (url.includes('/embed')) return url;
   const projectIdMatch = url.match(/projects\/(\d+)/);
   if (projectIdMatch) {
     return `https://scratch.mit.edu/projects/${projectIdMatch[1]}/embed`;
   }
-  
   return url;
 }
 
 export default function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [teamId, setTeamId] = useState<string>('');
-  
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [showVoteModal, setShowVoteModal] = useState(false);
@@ -59,7 +52,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
   const [hasVoted, setHasVoted] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // paramsを解決してteamIdを設定
   useEffect(() => {
     const resolveParams = async () => {
       const resolvedParams = await params;
@@ -68,7 +60,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
     resolveParams();
   }, [params]);
 
-  // チームデータを取得
   useEffect(() => {
     if (!teamId) return;
 
@@ -94,7 +85,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
     setHasVoted(hasVotedForTeam(teamId));
   }, [teamId]);
 
-  // 投票処理
   const handleVote = async () => {
     if (!team || voting || hasVoted || !teamId) return;
 
@@ -104,13 +94,8 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       
       const response = await fetch(`/api/teams/${teamId}/vote`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          reason: voteReason,
-          clientId: clientId
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: voteReason, clientId: clientId })
       });
 
       const result = await response.json();
@@ -118,6 +103,22 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       if (result.success) {
         setTeam(result.data);
         setShowVoteModal(false);
+        
+        // 投票コメントをチームチャットにも投稿
+        const authorName = session?.user?.name || 'ゲスト';
+        try {
+          await fetch(`/api/teams/${teamId}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: `💖 ハートを送りました！\n「${voteReason}」`,
+              author: authorName
+            })
+          });
+        } catch (chatError) {
+          console.error('チャット投稿エラー:', chatError);
+        }
+        
         setVoteReason('');
         setHasVoted(true);
         markTeamAsVoted(teamId);
@@ -168,7 +169,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
     );
   }
 
-  // Scratch埋め込みURL
   const scratchEmbedUrl = team.scratchUrl ? getScratchEmbedUrl(team.scratchUrl) : '';
 
   return (
@@ -180,7 +180,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* カバー画像とチーム情報ヘッダー */}
+        {/* カバー画像ヘッダー（ハート数表示なし） */}
         <div className="bg-white rounded-lg shadow-md mb-8 overflow-hidden">
           {team.imageUrl && !imageError ? (
             <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden">
@@ -191,16 +191,11 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                 onError={() => setImageError(true)}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-              
               <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
                     {team.name}
                   </span>
-                  <div className="flex items-center gap-1 bg-red-500/80 backdrop-blur-sm px-3 py-1 rounded-full">
-                    <span className="text-white">❤️</span>
-                    <span className="text-white font-medium">{team.hearts}</span>
-                  </div>
                 </div>
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg">
                   {team.title}
@@ -218,15 +213,9 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
-                <div className="flex items-center justify-center gap-3 mb-2">
-                  <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-                    {team.name}
-                  </span>
-                  <div className="flex items-center gap-1 bg-red-500/80 backdrop-blur-sm px-3 py-1 rounded-full">
-                    <span className="text-white">❤️</span>
-                    <span className="text-white font-medium">{team.hearts}</span>
-                  </div>
-                </div>
+                <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium mb-4 inline-block">
+                  {team.name}
+                </span>
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">
                   {team.title}
                 </h1>
@@ -238,38 +227,23 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
           )}
         </div>
 
+        {/* メインレイアウト：メインエリア（左）+ サイドバー（右） */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* プロジェクト詳細 */}
-          <div className="lg:col-span-2">
-            {/* プロジェクト概要 */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">📋 プロジェクト詳細</h2>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                    解決したい課題
-                  </h3>
-                  <p className="text-gray-600 bg-blue-50 p-3 rounded-md">{team.challenge}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    アプローチ・解決方法
-                  </h3>
-                  <p className="text-gray-600 bg-green-50 p-3 rounded-md">{team.approach}</p>
-                </div>
-              </div>
-            </div>
+          {/* メインエリア（左側・2/3幅） */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* 1. チーム専用チャット（最上部） */}
+            <TeamChat 
+              teamId={teamId} 
+              teamName={team.name}
+            />
 
-            {/* アプリ体験エリア */}
+            {/* 2. アプリ体験エリア */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold mb-4">🎮 アプリを体験してみよう</h2>
               
               {scratchEmbedUrl ? (
                 <div className="mb-4">
                   {!isFullscreen ? (
-                    // 小さなプレビュー表示（修正版）
                     <div className="relative bg-gray-50 rounded-lg overflow-hidden border-2 border-gray-200">
                       <iframe
                         src={scratchEmbedUrl}
@@ -280,9 +254,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                         allowFullScreen
                         loading="lazy"
                       />
-                      
-                      {/* オーバーレイボタン */}
-                      <div className="absolute top-3 right-3 flex gap-2">
+                      <div className="absolute top-3 right-3">
                         <button
                           onClick={() => setIsFullscreen(true)}
                           className="bg-black bg-opacity-70 hover:bg-opacity-90 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 shadow-lg"
@@ -293,14 +265,11 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                           拡大
                         </button>
                       </div>
-                      
-                      {/* プレイ誘導オーバーレイ */}
                       <div className="absolute bottom-3 left-3 bg-green-500 bg-opacity-90 text-white px-3 py-2 rounded-full text-sm font-medium shadow-lg">
                         ▶️ 緑の旗をクリックしてスタート！
                       </div>
                     </div>
                   ) : (
-                    // フルスクリーンモーダル
                     <div className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4">
                       <div className="w-full h-full max-w-7xl max-h-full bg-white rounded-lg overflow-hidden">
                         <div className="flex justify-between items-center p-4 border-b bg-gray-50">
@@ -345,7 +314,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                   )}
                 </div>
               ) : (
-                // プロジェクト準備中の表示
                 <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-8 text-center mb-4 border-2 border-dashed border-green-200">
                   <div className="w-full h-48 bg-white bg-opacity-50 rounded-lg flex items-center justify-center">
                     <div className="text-center">
@@ -361,9 +329,8 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                 </div>
               )}
 
-              {/* アクションボタン */}
-              <div className="flex gap-3">
-                {team.scratchUrl && (
+              {team.scratchUrl && (
+                <div className="flex gap-3">
                   <a
                     href={team.scratchUrl}
                     target="_blank"
@@ -375,20 +342,19 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                     </svg>
                     Scratchで開く
                   </a>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* サイドバー - 既存のコードと同じ */}
+          {/* サイドバー（右側・1/3幅） */}
           <div className="space-y-6">
-            {/* 投票セクション */}
+            {/* 1. 投票セクション */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-semibold mb-4">💖 このプロジェクトを応援</h3>
-              <div className="text-center mb-4">
-                <div className="text-3xl font-bold text-red-500">{team.hearts}</div>
-                <p className="text-gray-600 text-sm">ハート数</p>
-              </div>
+              <p className="text-gray-600 text-sm mb-4 text-center">
+                気に入ったプロジェクトにハートを送って応援しましょう
+              </p>
               <button
                 onClick={() => setShowVoteModal(true)}
                 disabled={hasVoted || voting}
@@ -404,7 +370,28 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
               </button>
             </div>
 
-            {/* チーム情報 */}
+            {/* 2. プロジェクト概要 */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold mb-4">📋 プロジェクト詳細</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    解決したい課題
+                  </h4>
+                  <p className="text-gray-600 bg-blue-50 p-3 rounded-md text-sm">{team.challenge}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    アプローチ・解決方法
+                  </h4>
+                  <p className="text-gray-600 bg-green-50 p-3 rounded-md text-sm">{team.approach}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. チーム情報 */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-semibold mb-4">👥 チーム情報</h3>
               <div className="space-y-4">
@@ -441,39 +428,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                     ))}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* 最近のコメント */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                最近のコメント
-              </h3>
-              <div className="space-y-3">
-                {team.comments.length > 0 ? (
-                  team.comments.slice(-3).reverse().map((comment, index) => (
-                    <div key={index} className="border-l-4 border-purple-200 pl-3 py-2 bg-purple-50 rounded-r-md">
-                      <p className="text-sm text-gray-700 font-medium mb-1">&quot;{comment.reason}&quot;</p>
-                      <p className="text-xs text-gray-500">
-                        {comment.author} • {new Date(comment.timestamp).toLocaleDateString('ja-JP', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4">
-                    <div className="text-2xl mb-2">💭</div>
-                    <p className="text-gray-500 text-sm">まだコメントがありません</p>
-                    <p className="text-gray-400 text-xs">最初のハートを送ってみませんか？</p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
