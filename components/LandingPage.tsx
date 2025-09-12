@@ -19,7 +19,7 @@ export default function LandingPage() {
     {
       icon: '💖',
       title: 'リアルタイム投票',
-      description: '気に入ったプロジェクトにハートを送って応援メッセージを届けよう',
+      description: '気に入ったプロジェクトに投票して応援メッセージを届けよう',
       gradient: 'linear-gradient(90deg,#FB7185,#FDBAFA)' // pink-ish
     },
     {
@@ -223,10 +223,6 @@ export default function LandingPage() {
                         <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
                         アプローチ方法を理解
                       </li>
-                      <li className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
-                        使用技術を知る
-                      </li>
                     </ul>
                   </div>
                 </>
@@ -239,7 +235,7 @@ export default function LandingPage() {
                     <ul className="space-y-2 text-gray-600">
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                        ハートを送って応援
+                        投票して応援
                       </li>
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
@@ -321,7 +317,7 @@ export default function LandingPage() {
                       </li>
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
-                        ハート数で自動集計
+                        投票数で自動集計
                       </li>
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>

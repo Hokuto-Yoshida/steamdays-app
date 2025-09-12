@@ -128,6 +128,49 @@ export default function Admin() {
     }
   };
 
+  // 投票完全リセット関数 (他の関数と一緒に追加)
+  const resetAllVotes = async () => {
+    const confirmMessage = `⚠️ 全ての投票データを完全にリセットしますか？\n\n削除される内容:\n・全ての投票履歴\n・全チームの投票数(ハート)\n・全てのコメント\n\nこの操作は取り消せません。\n\n本当に実行しますか？`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+    
+    // 二重確認
+    const finalConfirm = prompt('リセットを実行するには "RESET" と入力してください:', '');
+    if (finalConfirm !== 'RESET') {
+      setSetupStatus('❌ リセットがキャンセルされました');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      setSetupStatus('🔄 投票データを完全にリセット中...');
+      
+      const response = await fetch('/api/reset-all-votes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSetupStatus(`✅ ${result.message}`);
+        // 統計を再読み込み
+        fetchStats();
+      } else {
+        throw new Error(result.message || result.error);
+      }
+    } catch (error) {
+      console.error('投票リセットエラー:', error);
+      setSetupStatus(`❌ 投票リセットに失敗しました: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 統計データの取得
   const fetchStats = async () => {
     setRefreshing(true);
@@ -415,6 +458,32 @@ export default function Admin() {
           </div>
         </div>
 
+        <div className="mb-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-red-800 mb-2">⚠️ 危険な操作</h3>
+                <p className="text-red-700 text-sm mb-1">
+                  全ての投票データ（投票履歴・投票数・コメント）を完全に削除します
+                </p>
+                <p className="text-red-600 text-xs">
+                  この操作は取り消せません。明日のテスト前やデータが混乱した時のみ使用してください
+                </p>
+              </div>
+              <button
+                onClick={resetAllVotes}
+                disabled={loading}
+                className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 disabled:bg-gray-400 transition-colors font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                {loading ? '処理中...' : '投票を完全リセット'}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-8 mb-8">
           {/* チーム管理パネル */}
           <div className="bg-white rounded-lg shadow-sm border">
@@ -556,7 +625,7 @@ export default function Admin() {
                       
                       <div className="grid grid-cols-2 gap-4 p-3 bg-white rounded-lg border mb-3">
                         <div className="text-center">
-                          <p className="text-xs text-gray-600 mb-1">ハート数</p>
+                          <p className="text-xs text-gray-600 mb-1">投票数</p>
                           <p className="text-lg font-semibold">❤️ {team.hearts}</p>
                         </div>
                         <div className="text-center">

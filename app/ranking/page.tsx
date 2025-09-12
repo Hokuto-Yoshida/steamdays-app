@@ -27,7 +27,7 @@ export default function Ranking() {
       const result = await response.json();
       
       if (result.success) {
-        // ハート数順で並び替え
+        // 投票数順で並び替え
         const sortedTeams = [...result.data].sort((a, b) => b.hearts - a.hearts);
         setTeams(sortedTeams);
         setLastUpdate(new Date());
@@ -158,7 +158,7 @@ export default function Ranking() {
                     </div>
                   </div>
 
-                  {/* ハート数表示 */}
+                  {/* 投票数表示 */}
                   <div className="text-center mr-6">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 24 24">

@@ -126,3 +126,55 @@ export async function POST(
     );
   }
 }
+
+// チーム専用チャットメッセージを全削除（管理者専用）
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: teamId } = await params;
+    console.log(`🗑️ チーム${teamId}のチャットメッセージ全削除リクエスト`);
+    
+    await dbConnect();
+    
+    // セッション情報を取得（ログ用）
+    const session = await getServerSession();
+    const executorEmail = session?.user?.email || 'unknown';
+    
+    // 削除前に件数を確認
+    const messageCount = await TeamChatMessage.countDocuments({ teamId });
+    console.log(`📊 チーム${teamId}の削除対象メッセージ数: ${messageCount}件`);
+    
+    // 該当チームのチャットメッセージを全削除
+    const deleteResult = await TeamChatMessage.deleteMany({ teamId });
+    
+    console.log('✅ チームチャットメッセージ削除完了:', {
+      teamId,
+      deletedCount: deleteResult.deletedCount,
+      previousCount: messageCount,
+      executorEmail: executorEmail
+    });
+    
+    return NextResponse.json({
+      success: true,
+      message: `チーム${teamId}のチャットメッセージ${deleteResult.deletedCount}件を削除しました`,
+      data: {
+        teamId,
+        deletedCount: deleteResult.deletedCount,
+        previousCount: messageCount
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ チームチャットメッセージ削除エラー:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'チャットメッセージの削除に失敗しました',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}

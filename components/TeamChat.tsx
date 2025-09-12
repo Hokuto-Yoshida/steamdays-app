@@ -26,6 +26,7 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [resetting, setResetting] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -137,6 +138,36 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
     }
   };
 
+  // チーム専用チャットリセット処理（管理者専用）
+  const handleResetChat = async () => {
+    if (!session?.user || session.user.role !== 'admin') return;
+    
+    if (!confirm(`${teamName}のチャット（${messages.length}件）を削除しますか？この操作は取り消せません。`)) {
+      return;
+    }
+    
+    setResetting(true);
+    try {
+      const response = await fetch(`/api/teams/${teamId}/chat`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setMessages([]);
+        alert(`${teamName}のチャットをリセットしました。削除件数: ${result.data?.deletedCount || 0}件`);
+      } else {
+        alert('チャットリセットに失敗しました: ' + result.error);
+      }
+    } catch (error) {
+      console.error('チームチャットリセットエラー:', error);
+      alert('チャットリセット中にエラーが発生しました');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   // 時間フォーマット
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -181,6 +212,34 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
         </div>
         
         <div className="flex items-center gap-2">
+          {/* 管理者専用リセットボタン */}
+          {session?.user?.role === 'admin' && (
+            <button
+              onClick={handleResetChat}
+              disabled={resetting}
+              className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
+                resetting
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-red-600 hover:text-red-800 hover:bg-red-50'
+              }`}
+              title={`${teamName}のチャットをリセット`}
+            >
+              {resetting ? (
+                <>
+                  <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                  リセット中
+                </>
+              ) : (
+                <>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  リセット
+                </>
+              )}
+            </button>
+          )}
+          
           <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded-full ${
             isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
           }`}>

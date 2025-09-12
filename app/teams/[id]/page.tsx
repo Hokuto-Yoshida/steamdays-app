@@ -29,6 +29,11 @@ interface Team {
   comments: Comment[];
 }
 
+interface VoteStatus {
+  hasVoted: boolean;
+  votedTeam?: { id: string; name: string; title: string } | null;
+}
+
 function getScratchEmbedUrl(url: string): string {
   if (!url) return '';
   if (url.includes('/embed')) return url;
@@ -52,6 +57,12 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
   const [hasVoted, setHasVoted] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  // 追加: グローバル投票ステータス
+  const [globalVoteStatus, setGlobalVoteStatus] = useState<VoteStatus>({ 
+    hasVoted: false, 
+    votedTeam: null 
+  });
+
   useEffect(() => {
     const resolveParams = async () => {
       const resolvedParams = await params;
@@ -63,17 +74,42 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
   useEffect(() => {
     if (!teamId) return;
 
-    async function fetchTeam() {
+    async function fetchTeamAndVoteStatus() {
       try {
-        const response = await fetch(`/api/teams/${teamId}`);
-        const result = await response.json();
+        // 1. チーム情報取得
+        const teamResponse = await fetch(`/api/teams/${teamId}`);
+        const teamResult = await teamResponse.json();
         
-        if (result.success) {
-          setTeam(result.data);
+        if (teamResult.success) {
+          setTeam(teamResult.data);
           setImageError(false);
         } else {
-          console.error('Team fetch error:', result.error);
+          console.error('Team fetch error:', teamResult.error);
         }
+
+        // 2. グローバル投票ステータス確認
+        const clientId = generateClientId();
+        const voteStatusResponse = await fetch('/api/vote-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientId })
+        });
+
+        const voteStatusResult = await voteStatusResponse.json();
+        
+        if (voteStatusResult.success) {
+          setGlobalVoteStatus({
+            hasVoted: voteStatusResult.hasVoted,
+            votedTeam: voteStatusResult.votedTeam
+          });
+          
+          // 既存のhasVotedも更新（後方互換性のため）
+          setHasVoted(voteStatusResult.hasVoted);
+          
+          console.log('投票ステータス:', voteStatusResult.hasVoted ? 
+            `投票済み（${voteStatusResult.votedTeam?.name}）` : '未投票');
+        }
+        
       } catch (error) {
         console.error('Fetch error:', error);
       } finally {
@@ -81,12 +117,43 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       }
     }
 
-    fetchTeam();
-    setHasVoted(hasVotedForTeam(teamId));
+    fetchTeamAndVoteStatus();
+    // 従来のローカルチェックは削除
+    // setHasVoted(hasVotedForTeam(teamId));
   }, [teamId]);
 
+  // 投票ボタンの表示内容を決定
+  const getVoteButtonContent = () => {
+    if (globalVoteStatus.hasVoted) {
+      if (globalVoteStatus.votedTeam && globalVoteStatus.votedTeam.id === teamId) {
+        return '✅ このプロジェクトに投票済み';
+      } else {
+        return `✅ ${globalVoteStatus.votedTeam?.name || '他のプロジェクト'}に投票済み`;
+      }
+    }
+    
+    if (voting) {
+      return '⏳ 投票中...';
+    }
+    
+    return '❤️ 投票する';
+  };
+
+  // 投票ボタンのスタイルを決定
+  const getVoteButtonStyle = () => {
+    if (globalVoteStatus.hasVoted) {
+      return 'bg-gray-300 text-gray-500 cursor-not-allowed';
+    }
+    
+    if (voting) {
+      return 'bg-red-300 text-red-600 cursor-not-allowed';
+    }
+    
+    return 'bg-red-500 text-white hover:bg-red-600';
+  };
+
   const handleVote = async () => {
-    if (!team || voting || hasVoted || !teamId) return;
+    if (!team || voting || globalVoteStatus.hasVoted || !teamId) return;
 
     setVoting(true);
     try {
@@ -111,7 +178,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              message: `💖 ハートを送りました！\n「${voteReason}」`,
+              message: `💖 投票しました！\n「${voteReason}」`,
               author: authorName
             })
           });
@@ -120,16 +187,30 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
         }
         
         setVoteReason('');
+        
+        // グローバル投票ステータスを更新
+        setGlobalVoteStatus({
+          hasVoted: true,
+          votedTeam: {
+            id: teamId,
+            name: team.name,
+            title: team.title
+          }
+        });
         setHasVoted(true);
         markTeamAsVoted(teamId);
-        alert('投票ありがとうございます！❤️');
+        alert(`${team.name}に投票しました！`);
       } else {
-        if (result.error === 'Already voted for this team') {
-          alert('このチームには既に投票済みです');
+        if (result.error === 'Already voted') {
+          // 既に投票済みの場合、グローバルステータスを更新
+          setGlobalVoteStatus({
+            hasVoted: true,
+            votedTeam: result.votedTeam || null
+          });
           setHasVoted(true);
-          markTeamAsVoted(teamId);
+          alert(result.message || '既に投票済みです。投票は1人1回までです。');
         } else {
-          alert('投票に失敗しました: ' + result.error);
+          alert(result.message || '投票に失敗しました: ' + result.error);
         }
       }
     } catch (error) {
@@ -180,7 +261,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* カバー画像ヘッダー（ハート数表示なし） */}
+        {/* カバー画像ヘッダー（投票数表示なし） */}
         <div className="bg-white rounded-lg shadow-md mb-8 overflow-hidden">
           {team.imageUrl && !imageError ? (
             <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden">
@@ -349,24 +430,37 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
 
           {/* サイドバー（右側・1/3幅） */}
           <div className="space-y-6">
-            {/* 1. 投票セクション */}
+            {/* 1. 投票セクション（修正版） */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-semibold mb-4">💖 このプロジェクトを応援</h3>
-              <p className="text-gray-600 text-sm mb-4 text-center">
-                気に入ったプロジェクトにハートを送って応援しましょう
-              </p>
+              
+              {/* 投票ステータスによる表示切り替え */}
+              {globalVoteStatus.hasVoted ? (
+                <div className="text-center mb-4">
+                  <p className="text-gray-600 text-sm mb-2">
+                    {globalVoteStatus.votedTeam?.id === teamId 
+                      ? 'このプロジェクトに投票していただきありがとうございます！'
+                      : `「${globalVoteStatus.votedTeam?.name}」に投票済みです`
+                    }
+                  </p>
+                  {globalVoteStatus.votedTeam?.id !== teamId && (
+                    <p className="text-gray-500 text-xs">
+                      投票は1人1回までです
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-600 text-sm mb-4 text-center">
+                  気に入ったプロジェクトに投票して応援しましょう
+                </p>
+              )}
+              
               <button
                 onClick={() => setShowVoteModal(true)}
-                disabled={hasVoted || voting}
-                className={`w-full py-3 rounded-md font-medium transition-colors ${
-                  hasVoted 
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : voting
-                    ? 'bg-red-300 text-red-600 cursor-not-allowed'
-                    : 'bg-red-500 text-white hover:bg-red-600'
-                }`}
+                disabled={globalVoteStatus.hasVoted || voting}
+                className={`w-full py-3 rounded-md font-medium transition-colors ${getVoteButtonStyle()}`}
               >
-                {hasVoted ? '✅ 投票済み' : voting ? '⏳ 投票中...' : '❤️ ハートを送る'}
+                {getVoteButtonContent()}
               </button>
             </div>
 
@@ -413,21 +507,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                     ))}
                   </div>
                 </div>
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
-                    使用技術
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {team.technologies.map((tech, index) => (
-                      <span key={index} className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium">
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -438,7 +517,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       {showVoteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">❤️ ハートを送る</h3>
+            <h3 className="text-lg font-semibold mb-4">❤️ 投票する</h3>
             <p className="text-gray-600 mb-4">
               このプロジェクトの良かった点や感想を教えてください<span className="text-red-500">（必須）</span>
             </p>
@@ -462,14 +541,14 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
               </button>
               <button
                 onClick={handleVote}
-                disabled={voting || hasVoted || !voteReason.trim()}
+                disabled={voting || globalVoteStatus.hasVoted || !voteReason.trim()}
                 className={`flex-1 py-2 rounded-md transition-colors ${
-                  voting || hasVoted || !voteReason.trim()
+                  voting || globalVoteStatus.hasVoted || !voteReason.trim()
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-red-500 text-white hover:bg-red-600'
                 }`}
               >
-                {voting ? '送信中...' : 'ハートを送る'}
+                {voting ? '送信中...' : '投票する'}
               </button>
             </div>
           </div>

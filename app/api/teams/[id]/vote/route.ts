@@ -23,7 +23,7 @@ export async function POST(
     if (!reason || !reason.trim()) {
       console.log('❌ バリデーションエラー: コメントが必須です');
       return NextResponse.json(
-        { success: false, error: 'ハートを送るにはコメント（感想・理由）が必要です' },
+        { success: false, error: '投票するにはコメント（感想・理由）が必要です' },
         { status: 400 }
       );
     }
@@ -60,11 +60,10 @@ export async function POST(
                      request.headers.get('x-real-ip') || 
                      'unknown';
     
-    console.log('🔍 重複投票チェック - IP:', ipAddress, 'ClientID:', clientId);
+    console.log('🔍 既投票チェック - IP:', ipAddress, 'ClientID:', clientId);
     
-    // 重複投票チェック（IPアドレスまたはクライアントIDで）
+    // 既投票チェック（全チーム対象・IPアドレスまたはクライアントIDで）
     const existingVote = await Vote.findOne({
-      teamId: id,
       $or: [
         { ipAddress: ipAddress },
         { clientId: clientId }
@@ -72,9 +71,27 @@ export async function POST(
     });
     
     if (existingVote) {
-      console.log('❌ 重複投票検出:', existingVote);
+      console.log('❌ 既投票検出:', {
+        votedTeam: existingVote.teamId,
+        currentTeam: id,
+        ipAddress: existingVote.ipAddress,
+        clientId: existingVote.clientId
+      });
+      
+      // 既に投票したチーム情報を取得
+      const votedTeam = await Team.findOne({ id: existingVote.teamId });
+      const votedTeamName = votedTeam ? votedTeam.name : '不明なチーム';
+      
       return NextResponse.json(
-        { success: false, error: 'Already voted for this team' },
+        { 
+          success: false, 
+          error: 'Already voted',
+          message: `既に${votedTeamName}に投票済みです。投票は1人1回までです。`,
+          votedTeam: {
+            id: existingVote.teamId,
+            name: votedTeamName
+          }
+        },
         { status: 400 }
       );
     }
@@ -103,7 +120,7 @@ export async function POST(
     await vote.save();
     console.log('✅ 投票記録保存完了:', vote._id);
 
-    // チームのハート数とコメントを更新
+    // チームの投票数とコメントを更新
     const updatedTeam = await Team.findOneAndUpdate(
       { id },
       {
@@ -128,12 +145,12 @@ export async function POST(
       );
     }
 
-    console.log('✅ 投票完了 - 新しいハート数:', updatedTeam.hearts);
+    console.log('✅ 投票完了 - チーム:', team.name, '新しい投票数:', updatedTeam.hearts);
 
     return NextResponse.json({
       success: true,
       data: updatedTeam,
-      message: 'ハートとコメントを送信しました！'
+      message: `${team.name}に投票しました！`
     });
 
   } catch (error) {
@@ -142,7 +159,7 @@ export async function POST(
     // 重複キーエラーの場合
     if (error instanceof Error && error.message.includes('duplicate key')) {
       return NextResponse.json(
-        { success: false, error: 'Already voted for this team' },
+        { success: false, error: 'Already voted' },
         { status: 400 }
       );
     }

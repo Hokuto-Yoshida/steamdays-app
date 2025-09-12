@@ -9,7 +9,7 @@ interface NavbarProps {
   backUrl?: string;
 }
 
-export default function Navbar({ title = 'STEAMDAYS!!!!', showBackButton = false, backUrl = '/' }: NavbarProps) {
+export default function Navbar({ title = 'STEAMDAYS!!', showBackButton = false, backUrl = '/' }: NavbarProps) {
   const { data: session, status } = useSession();
 
   const getRoleDisplayName = (role: string) => {
@@ -34,11 +34,29 @@ export default function Navbar({ title = 'STEAMDAYS!!!!', showBackButton = false
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          {/* 左側：タイトルとナビゲーション */}
+          {/* 左側：ロゴとタイトル */}
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              {title}
-            </h1>
+            <div className="flex items-center gap-3">
+              <img 
+                src="/images/steamdays-logo.png" 
+                alt="STEAMDAYS ロゴ" 
+                className="w-10 h-10 object-contain"
+                onError={(e) => {
+                  // 画像が読み込めない場合のフォールバック
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+              {/* フォールバック用アイコン */}
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg" style={{display: 'none'}}>
+                S
+              </div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                {title}
+              </h1>
+            </div>
           </div>
 
           {/* 右側：ユーザー情報とメニュー */}
@@ -51,6 +69,19 @@ export default function Navbar({ title = 'STEAMDAYS!!!!', showBackButton = false
               >
                 ホーム
               </Link>
+              
+              {/* イベントサイトリンク */}
+              <a
+                href="https://steamdays.innodrops.org/contest-saga2025/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-gray-800 transition-colors flex items-center gap-1"
+              >
+                イベントサイト
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
               
               {/* ランキングは管理者のみ表示 */}
               {session?.user?.role === 'admin' && (
@@ -128,6 +159,7 @@ export default function Navbar({ title = 'STEAMDAYS!!!!', showBackButton = false
         <nav className="md:hidden mt-4 pt-4 border-t border-gray-200">
           <div className="flex flex-wrap gap-4">
             <Link href="/" className="text-gray-600 hover:text-gray-800">ホーム</Link>
+            <a href="#" className="text-gray-600 hover:text-gray-800">イベントサイト</a>
             
             {/* モバイルでもランキングは管理者のみ */}
             {session?.user?.role === 'admin' && (

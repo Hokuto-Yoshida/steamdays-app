@@ -27,6 +27,35 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [currentFeature, setCurrentFeature] = useState(0);
+
+  // 体験できることの機能一覧
+  const features = [
+    {
+      icon: '🎯',
+      title: 'プロジェクト体験',
+      description: '中高生が4ヶ月間かけて開発したプロジェクトを実際に体験できます',
+      gradient: 'linear-gradient(90deg,#60A5FA,#34D399)'
+    },
+    {
+      icon: '💖',
+      title: '投票システム',
+      description: '気に入ったプロジェクトに投票して応援メッセージを届けよう（1人1票）',
+      gradient: 'linear-gradient(90deg,#FB7185,#FDBAFA)'
+    },
+    {
+      icon: '💬',
+      title: 'ライブチャット',
+      description: '参加者全員でリアルタイムに交流・感想を共有できます',
+      gradient: 'linear-gradient(90deg,#A78BFA,#60A5FA)'
+    },
+    {
+      icon: '🏆',
+      title: 'オーディエンス賞',
+      description: '皆さんの投票で最も支持されたプロジェクトが選ばれます',
+      gradient: 'linear-gradient(90deg,#FBBF24,#FB923C)'
+    }
+  ];
 
   // 画像読み込みエラーを記録
   const handleImageError = (teamId: string) => {
@@ -154,28 +183,203 @@ export default function Home() {
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
             各チームが4ヶ月間かけて開発したプロジェクトを実際に体験できます。
-            気に入ったプロジェクトにはハートを押して応援しましょう！
+            気に入ったプロジェクトには投票して応援しましょう！
           </p>
         </div>
 
-        {/* オーディエンス賞セクション - 上部に移動 */}
-        <div className="mb-8 bg-white rounded-lg shadow-md p-8 text-center">
-          <h3 className="text-2xl font-semibold mb-4 text-gray-800">🏆 オーディエンス賞</h3>
-          <p className="text-gray-600 mb-6">
-            皆さんの投票で最も支持されたプロジェクトが選ばれます！<br />
-            気に入ったプロジェクトにハートを押して、理由や感想も教えてください。
-          </p>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 inline-block">
-            <p className="text-yellow-800 font-medium flex items-center gap-2 justify-center">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              各プロジェクトページで実際にアプリを体験できます
+        {/* 体験できることセクション */}
+        <section className="mb-12 bg-white rounded-2xl shadow-lg p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">
+              🌟 体験できること
+            </h2>
+            <p className="text-lg text-gray-600">
+              STEAMDAYS!!の投票システムで楽しめる機能をご紹介
             </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className={`relative p-4 rounded-xl bg-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border-2 ${
+                  currentFeature === index ? 'border-blue-300' : 'border-transparent'
+                }`}
+                onClick={() => setCurrentFeature(index)}
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-xl mb-3 shadow-md"
+                  style={{
+                    background: feature.gradient,
+                    color: 'white'
+                  }}
+                >
+                  {feature.icon}
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-gray-50 rounded-xl shadow-inner p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-lg"
+                style={{
+                  background: features[currentFeature].gradient,
+                  color: 'white'
+                }}
+              >
+                {features[currentFeature].icon}
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">
+                  {features[currentFeature].title}
+                </h3>
+                <p className="text-gray-600">
+                  {features[currentFeature].description}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+              {currentFeature === 0 && (
+                <>
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2">📱 実際に触れる</h4>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>• Scratchプロジェクトを直接操作</li>
+                      <li>• フルスクリーン表示対応</li>
+                      <li>• プロジェクト詳細情報を確認</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2">🎨 作品を理解</h4>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>• 解決したい課題を確認</li>
+                      <li>• アプローチ方法を理解</li>
+                      <li>• チーム情報の詳細表示</li>
+                    </ul>
+                  </div>
+                </>
+              )}
+
+              {currentFeature === 1 && (
+                <>
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2">💖 投票システム</h4>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>• 1人1票の公平な投票制度</li>
+                      <li>• 感想・コメント必須入力</li>
+                      <li>• 重複投票防止システム</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2">📝 フィードバック</h4>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>• 具体的な感想を送信</li>
+                      <li>• 制作者への励みになる</li>
+                      <li>• 応援メッセージが届く</li>
+                    </ul>
+                  </div>
+                </>
+              )}
+
+              {currentFeature === 2 && (
+                <>
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2">💬 リアルタイム交流</h4>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>• 全体チャットで交流</li>
+                      <li>• チーム専用チャット</li>
+                      <li>• 感想や質問を共有</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2">🌐 コミュニティ</h4>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>• 参加者同士で情報交換</li>
+                      <li>• ライブ配信のような体験</li>
+                      <li>• イベントの一体感を演出</li>
+                    </ul>
+                  </div>
+                </>
+              )}
+
+              {currentFeature === 3 && (
+                <>
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2">🏆 公正な評価</h4>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>• 1人1票の投票制度</li>
+                      <li>• 透明性のある集計</li>
+                      <li>• 参加者の声が反映</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2">🎉 表彰システム</h4>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>• 上位チームを表彰</li>
+                      <li>• 視覚的な結果表示</li>
+                      <li>• みんなで決めるオーディエンス賞</li>
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* 投票方法の説明セクション */}
+        <div className="mb-8 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-6">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <span className="text-2xl">🗳️</span>
+            投票方法について
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-700 mb-2">投票ルール</h4>
+              <ul className="space-y-2 text-gray-600 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 font-bold">1.</span>
+                  <span><strong>1人1票</strong>：お一人様につき、1つのプロジェクトにのみ投票できます</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 font-bold">2.</span>
+                  <span><strong>コメント必須</strong>：投票時には感想や理由を必ず入力してください</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 font-bold">3.</span>
+                  <span><strong>変更不可</strong>：一度投票すると変更できませんので、慎重にお選びください</span>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-700 mb-2">投票手順</h4>
+              <ol className="space-y-2 text-gray-600 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">1</span>
+                  <span>各チームページでプロジェクトを体験</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">2</span>
+                  <span>気に入ったプロジェクトで「投票する」ボタンをクリック</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">3</span>
+                  <span>感想・理由を入力して投票完了</span>
+                </li>
+              </ol>
+            </div>
           </div>
         </div>
 
-        {/* チャット利用ガイド - 上部に移動 */}
+        {/* チャット利用ガイド */}
         <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h4 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,27 +517,6 @@ export default function Home() {
                   <p className="text-gray-600 text-sm mb-4 line-clamp-3 leading-relaxed">
                     {team.description}
                   </p>
-
-                  {/* 技術タグ */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {team.technologies.slice(0, 3).map((tech, index) => (
-                      <span 
-                        key={tech} 
-                        className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          index === 0 ? 'bg-blue-100 text-blue-700' :
-                          index === 1 ? 'bg-green-100 text-green-700' :
-                          'bg-purple-100 text-purple-700'
-                        }`}
-                      >
-                        {tech}
-                      </span>
-                    ))}
-                    {team.technologies.length > 3 && (
-                      <span className="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded-full">
-                        +{team.technologies.length - 3}
-                      </span>
-                    )}
-                  </div>
 
                   {/* アクションボタン */}
                   <div className="flex gap-2">

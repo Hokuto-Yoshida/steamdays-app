@@ -15,7 +15,7 @@ interface Team {
   technologies: string[];
   scratchUrl: string;
   imageUrl: string; // Base64画像データまたはURL
-  hearts: number; // ハート数追加
+  hearts: number; // 投票数追加
   comments: { reason: string; timestamp: Date; author: string }[]; // コメント追加
   status?: string; // ステータス追加
   editingAllowed?: boolean; // 🆕 編集権限フラグ追加
@@ -581,44 +581,6 @@ export default function TeamEditPage({ params }: { params: Promise<{ id: string 
                     type="button"
                     onClick={() => removeMember(index)}
                     className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 使用技術 */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">使用技術</h2>
-            
-            <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={technologyInput}
-                onChange={(e) => setTechnologyInput(e.target.value)}
-                placeholder="使用技術を入力"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTechnology())}
-              />
-              <button
-                type="button"
-                onClick={addTechnology}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-              >
-                追加
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {team.technologies.map((tech, index) => (
-                <div key={index} className="flex items-center gap-2 bg-green-100 px-3 py-1 rounded-full">
-                  <span className="text-green-800">{tech}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeTechnology(index)}
-                    className="text-green-600 hover:text-green-800 text-sm"
                   >
                     ×
                   </button>
