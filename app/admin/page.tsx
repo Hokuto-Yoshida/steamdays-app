@@ -411,7 +411,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar 
-        title="🔧 STEAMDAYS!! 運営管理"
+        title="STEAMDAYS!! 運営管理"
         showBackButton={true}
         backUrl="/"
       />
