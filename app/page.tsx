@@ -201,17 +201,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 参加チームプロジェクト体験セクション */}
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-            参加チームのプロジェクトを体験しよう！
-          </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            各チームが4ヶ月間かけて開発したプロジェクトを実際に体験できます。
-            気に入ったプロジェクトには投票して応援しましょう！
-          </p>
-        </div>
-
         {/* 体験できることセクション */}
         <section className="mb-12 bg-white rounded-2xl shadow-lg p-8">
           <div className="text-center mb-8">
