@@ -19,6 +19,7 @@ interface Team {
   imageUrl?: string;
   status?: 'upcoming' | 'live' | 'ended';
   comments?: { reason: string; timestamp: string; author: string }[];
+  sortOrder?: number; // 順序指定フィールドを追加
 }
 
 export default function Home() {
@@ -105,7 +106,16 @@ export default function Home() {
         const result = await response.json();
         
         if (result.success) {
-          setTeams(result.data);
+          let teamsData = result.data;
+          
+          // 管理画面と同じソート処理を追加
+          teamsData.sort((a: Team, b: Team) => {
+            const aOrder = a.sortOrder !== undefined ? a.sortOrder : parseInt(a.id) || 999;
+            const bOrder = b.sortOrder !== undefined ? b.sortOrder : parseInt(b.id) || 999;
+            return aOrder - bOrder;
+          });
+          
+          setTeams(teamsData);
           setImageErrors(new Set());
         } else {
           setError('チームデータの取得に失敗しました');

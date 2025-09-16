@@ -22,7 +22,8 @@ export interface ITeam {
   hearts: number;
   comments: IComment[];
   status?: string;
-  editingAllowed?: boolean; // 🆕 編集権限フラグを追加
+  editingAllowed?: boolean;
+  sortOrder?: number; // 🆕 順序フィールドを追加
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -52,9 +53,13 @@ const TeamSchema = new mongoose.Schema<ITeam>({
     enum: ['upcoming', 'live', 'ended'],
     default: 'upcoming'
   },
-  editingAllowed: { // 🆕 編集権限フラグ
+  editingAllowed: {
     type: Boolean,
-    default: false // デフォルトは編集不可（安全優先）
+    default: false
+  },
+  sortOrder: { // 🆕 順序フィールドを追加
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
@@ -79,7 +84,6 @@ const VoteSchema = new mongoose.Schema<IVote>({
   reason: { type: String }
 });
 
-// 一意制約：同じIPアドレスまたはクライアントIDから同じチームへは1回のみ投票可能
 VoteSchema.index({ teamId: 1, ipAddress: 1 }, { unique: true });
 VoteSchema.index({ teamId: 1, clientId: 1 }, { unique: true, sparse: true });
 
