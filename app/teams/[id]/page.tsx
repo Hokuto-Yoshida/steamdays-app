@@ -41,6 +41,218 @@ const VoteIcon = ({ size = 24, className = '' }) => (
   </svg>
 );
 
+// スマホキーボード表示コンポーネント（ボタンのみ版）
+const MobileKeyboardButton = () => {
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [showVirtualKeys, setShowVirtualKeys] = useState(false);
+  const hiddenInputRef = useRef<HTMLInputElement>(null);
+
+  // デバイス判定
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  // キーボードを表示
+  const showKeyboard = () => {
+    if (hiddenInputRef.current) {
+      hiddenInputRef.current.focus();
+      setIsKeyboardVisible(true);
+      // モバイルでない場合は仮想キーボードも表示
+      if (!isMobile()) {
+        setShowVirtualKeys(true);
+      }
+    }
+  };
+
+  // キーボードを非表示
+  const hideKeyboard = () => {
+    if (hiddenInputRef.current) {
+      hiddenInputRef.current.blur();
+      setIsKeyboardVisible(false);
+      setShowVirtualKeys(false);
+    }
+  };
+
+  // キーイベントをScratchに送信（postMessageを使用）
+  const sendKeyToScratch = (key: string, keyCode?: number) => {
+    // 1. iframe内のScratchにpostMessageで送信
+    const scratchIframes = document.querySelectorAll('iframe[src*="scratch.mit.edu"]');
+    scratchIframes.forEach(iframe => {
+      try {
+        (iframe as HTMLIFrameElement).contentWindow?.postMessage({
+          type: 'keyevent',
+          key: key,
+          keyCode: keyCode || key.charCodeAt(0),
+          which: keyCode || key.charCodeAt(0)
+        }, '*');
+      } catch (error) {
+        console.log('PostMessage送信:', error);
+      }
+    });
+
+    // 2. 直接keydownイベントを作成してiframeに送信
+    const keyEvent = new KeyboardEvent('keydown', {
+      key: key,
+      code: key === ' ' ? 'Space' : `Key${key.toUpperCase()}`,
+      keyCode: keyCode || (key === ' ' ? 32 : key.charCodeAt(0)),
+      which: keyCode || (key === ' ' ? 32 : key.charCodeAt(0)),
+      bubbles: true,
+      cancelable: true
+    });
+
+    // iframe要素自体にもイベントを送信
+    scratchIframes.forEach(iframe => {
+      iframe.dispatchEvent(keyEvent);
+    });
+  };
+
+  // 隠しinputのキーイベントをScratchに転送
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    sendKeyToScratch(e.key, e.keyCode);
+    
+    // 視覚的フィードback
+    const keyName = e.key === ' ' ? 'スペース' : e.key;
+    console.log(`キー送信: ${keyName}`);
+  };
+
+  // 仮想キーボードのボタン
+  const VirtualKeyboard = () => (
+    <div className="fixed bottom-20 left-4 right-4 bg-white border-2 border-gray-300 rounded-lg shadow-lg p-4 z-40">
+      <div className="text-center mb-2">
+        <h4 className="text-sm font-medium text-gray-700">仮想キーボード</h4>
+        <p className="text-xs text-gray-500">Scratchゲーム用</p>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        <button 
+          className="bg-blue-500 text-white p-3 rounded text-sm font-medium active:bg-blue-600 touch-manipulation"
+          onTouchStart={() => sendKeyToScratch(' ', 32)}
+          onClick={() => sendKeyToScratch(' ', 32)}
+        >
+          スペース
+        </button>
+        <button 
+          className="bg-gray-500 text-white p-3 rounded text-sm font-medium active:bg-gray-600 touch-manipulation"
+          onTouchStart={() => sendKeyToScratch('ArrowUp', 38)}
+          onClick={() => sendKeyToScratch('ArrowUp', 38)}
+        >
+          ↑
+        </button>
+        <button 
+          className="bg-gray-500 text-white p-3 rounded text-sm font-medium active:bg-gray-600 touch-manipulation"
+          onTouchStart={() => sendKeyToScratch('ArrowDown', 40)}
+          onClick={() => sendKeyToScratch('ArrowDown', 40)}
+        >
+          ↓
+        </button>
+        <button 
+          className="bg-gray-500 text-white p-3 rounded text-sm font-medium active:bg-gray-600 touch-manipulation"
+          onTouchStart={() => sendKeyToScratch('Enter', 13)}
+          onClick={() => sendKeyToScratch('Enter', 13)}
+        >
+          Enter
+        </button>
+        <button 
+          className="bg-gray-500 text-white p-3 rounded text-sm font-medium active:bg-gray-600 touch-manipulation"
+          onTouchStart={() => sendKeyToScratch('ArrowLeft', 37)}
+          onClick={() => sendKeyToScratch('ArrowLeft', 37)}
+        >
+          ←
+        </button>
+        <button 
+          className="bg-gray-500 text-white p-3 rounded text-sm font-medium active:bg-gray-600 touch-manipulation"
+          onTouchStart={() => sendKeyToScratch('ArrowRight', 39)}
+          onClick={() => sendKeyToScratch('ArrowRight', 39)}
+        >
+          →
+        </button>
+        <button 
+          className="bg-green-500 text-white p-3 rounded text-sm font-medium active:bg-green-600 touch-manipulation"
+          onTouchStart={() => sendKeyToScratch('a', 65)}
+          onClick={() => sendKeyToScratch('a', 65)}
+        >
+          A
+        </button>
+        <button 
+          className="bg-green-500 text-white p-3 rounded text-sm font-medium active:bg-green-600 touch-manipulation"
+          onTouchStart={() => sendKeyToScratch('s', 83)}
+          onClick={() => sendKeyToScratch('s', 83)}
+        >
+          S
+        </button>
+      </div>
+      <div className="mt-3 text-center">
+        <button
+          onClick={hideKeyboard}
+          className="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600"
+        >
+          キーボードを閉じる
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* 隠しinput要素 */}
+      <input
+        ref={hiddenInputRef}
+        type="text"
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: '-9999px',
+          opacity: 0,
+          pointerEvents: 'none',
+          width: '1px',
+          height: '1px'
+        }}
+        onKeyDown={handleKeyDown}
+        onBlur={() => {
+          setIsKeyboardVisible(false);
+          setShowVirtualKeys(false);
+        }}
+        onFocus={() => setIsKeyboardVisible(true)}
+        // 自動コンプリートを無効化
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck="false"
+      />
+
+      {/* キーボード表示ボタン */}
+      <button
+        onClick={isKeyboardVisible ? hideKeyboard : showKeyboard}
+        className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
+          isKeyboardVisible 
+            ? 'bg-red-500 text-white hover:bg-red-600' 
+            : 'bg-blue-500 text-white hover:bg-blue-600'
+        }`}
+        aria-label={isKeyboardVisible ? 'キーボードを非表示' : 'キーボードを表示'}
+      >
+        <span className="text-lg">⌨️</span>
+        <span>
+          {isKeyboardVisible ? 'キーボード非表示' : 'キーボード表示（モバイル用）'}
+        </span>
+      </button>
+
+      {/* 仮想キーボード（PC/タブレット用） */}
+      {showVirtualKeys && <VirtualKeyboard />}
+
+      {/* キーボード表示中の説明 */}
+      {isKeyboardVisible && (
+        <div className="fixed bottom-16 right-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-xs z-40 max-w-xs">
+          {isMobile() ? (
+            <p>📱 スマホのキーボードでScratchを操作できます</p>
+          ) : (
+            <p>💻 仮想キーボードまたは物理キーボードでScratchを操作できます</p>
+          )}
+        </div>
+      )}
+    </>
+  );
+};
+
 // スマホキーボード表示コンポーネント
 const MobileKeyboardTrigger = () => {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -650,7 +862,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
               )}
 
               {team.scratchUrl && (
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-wrap">
                   <a
                     href={team.scratchUrl}
                     target="_blank"
@@ -662,6 +874,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                     </svg>
                     Scratchで開く
                   </a>
+                  <MobileKeyboardButton />
                 </div>
               )}
             </div>
@@ -775,8 +988,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
         </div>
       </main>
 
-      {/* スマホキーボード表示機能 */}
-      <MobileKeyboardTrigger />
+      {/* 元の右下固定キーボードボタンは削除 */}
 
       {/* 投票モーダル */}
       {showVoteModal && (
