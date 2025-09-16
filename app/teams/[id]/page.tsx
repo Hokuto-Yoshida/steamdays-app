@@ -34,6 +34,13 @@ interface VoteStatus {
   votedTeam?: { id: string; name: string; title: string } | null;
 }
 
+// SVG投票アイコンコンポーネント
+const VoteIcon = ({ size = 24, className = '' }) => (
+  <svg width={size} height={size} className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
 function getScratchEmbedUrl(url: string): string {
   if (!url) return '';
   if (url.includes('/embed')) return url;
@@ -118,17 +125,25 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
     }
 
     fetchTeamAndVoteStatus();
-    // 従来のローカルチェックは削除
-    // setHasVoted(hasVotedForTeam(teamId));
   }, [teamId]);
 
   // 投票ボタンの表示内容を決定
   const getVoteButtonContent = () => {
     if (globalVoteStatus.hasVoted) {
       if (globalVoteStatus.votedTeam && globalVoteStatus.votedTeam.id === teamId) {
-        return '✅ このプロジェクトに投票済み';
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-lg">🗳️</span>
+            <span>このプロジェクトに投票済み</span>
+          </div>
+        );
       } else {
-        return `✅ ${globalVoteStatus.votedTeam?.name || '他のプロジェクト'}に投票済み`;
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-lg">🗳️</span>
+            <span>{globalVoteStatus.votedTeam?.name || '他のプロジェクト'}に投票済み</span>
+          </div>
+        );
       }
     }
     
@@ -136,7 +151,11 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       return '⏳ 投票中...';
     }
     
-    return '❤️ 投票する';
+    return (
+      <div className="flex items-center justify-center gap-2">
+        <span>投票する</span>
+      </div>
+    );
   };
 
   // 投票ボタンのスタイルを決定
@@ -291,7 +310,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
               <div className="text-center text-white">
                 <div className="w-24 h-24 md:w-32 md:h-32 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-12 h-12 md:w-16 md:h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
                 <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium mb-4 inline-block">
@@ -318,7 +337,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
               teamName={team.name}
             />
 
-            {/* 2. アプリ体験エリア */}
+            {/* 2. アプリ体験エリア（チャットの下） */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold mb-4">🎮 アプリを体験してみよう</h2>
               
@@ -334,6 +353,8 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                         title={`${team.name} - Scratchプロジェクト`}
                         allowFullScreen
                         loading="lazy"
+                        // スマホでのキーボード表示のため
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"
                       />
                       <div className="absolute top-3 right-3">
                         <button
@@ -345,9 +366,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                           </svg>
                           拡大
                         </button>
-                      </div>
-                      <div className="absolute bottom-3 left-3 bg-green-500 bg-opacity-90 text-white px-3 py-2 rounded-full text-sm font-medium shadow-lg">
-                        ▶️ 緑の旗をクリックしてスタート！
                       </div>
                     </div>
                   ) : (
@@ -389,10 +407,23 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                           title={`${team.name} - Scratchプロジェクト（フルスクリーン）`}
                           className="border-0"
                           allowFullScreen
+                          // スマホでのキーボード表示のため
+                          sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"
                         />
                       </div>
                     </div>
                   )}
+                  
+                  {/* スタートボタンを下に移動 */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4 text-center">
+                    <div className="flex items-center justify-center gap-2 text-green-700 font-medium">
+                      <span className="text-2xl">▶️</span>
+                      <span>緑の旗をクリックしてスタート！</span>
+                    </div>
+                    <p className="text-green-600 text-sm mt-2">
+                      📱 スマホの方：画面をタップしてキーボードを表示できます
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-8 text-center mb-4 border-2 border-dashed border-green-200">
@@ -430,9 +461,78 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
 
           {/* サイドバー（右側・1/3幅） */}
           <div className="space-y-6">
-            {/* 1. 投票セクション（修正版） */}
+            {/* 1. プロジェクト概要（1番上に移動） */}
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">💖 このプロジェクトを応援</h3>
+              <h3 className="text-lg font-semibold mb-4">📋 プロジェクト詳細</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    解決したい課題
+                  </h4>
+                  <p className="text-gray-600 bg-blue-50 p-3 rounded-md text-sm">{team.challenge}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    アプローチ・解決方法
+                  </h4>
+                  <p className="text-gray-600 bg-green-50 p-3 rounded-md text-sm">{team.approach}</p>
+                </div>
+              </div>
+            </div>
+
+            
+            {/* 3. チーム情報 */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold mb-4">👥 チーム情報</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                    メンバー
+                  </h4>
+                  <div className="space-y-1">
+                    {team.members.map((member, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 text-xs">👤</span>
+                        </div>
+                        <span className="text-gray-700">{member}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. 投票セクション（修正版） */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">🗳️</span>
+                <h3 className="text-lg font-semibold">このプロジェクトを応援</h3>
+              </div>
+              
+              {/* 投票ルール説明 */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <h4 className="font-medium text-gray-700 mb-2">投票ルール</h4>
+                <ul className="space-y-1 text-sm text-gray-600">
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                    <span><strong>1人1票</strong>：お一人様につき、1つのプロジェクトにのみ投票できます</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                    <span><strong>コメント必須</strong>：投票時には感想や理由を必ず入力してください</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                    <span><strong>変更不可</strong>：一度投票すると変更できません</span>
+                  </li>
+                </ul>
+              </div>
               
               {/* 投票ステータスによる表示切り替え */}
               {globalVoteStatus.hasVoted ? (
@@ -463,52 +563,6 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
                 {getVoteButtonContent()}
               </button>
             </div>
-
-            {/* 2. プロジェクト概要 */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">📋 プロジェクト詳細</h3>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                    解決したい課題
-                  </h4>
-                  <p className="text-gray-600 bg-blue-50 p-3 rounded-md text-sm">{team.challenge}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    アプローチ・解決方法
-                  </h4>
-                  <p className="text-gray-600 bg-green-50 p-3 rounded-md text-sm">{team.approach}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. チーム情報 */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">👥 チーム情報</h3>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                    メンバー
-                  </h4>
-                  <div className="space-y-1">
-                    {team.members.map((member, index) => (
-                      <div key={index} className="flex items-center gap-2 text-sm">
-                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 text-xs">👤</span>
-                        </div>
-                        <span className="text-gray-700">{member}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </main>
@@ -517,7 +571,10 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
       {showVoteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">❤️ 投票する</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">🗳️</span>
+              <h3 className="text-lg font-semibold">投票する</h3>
+            </div>
             <p className="text-gray-600 mb-4">
               このプロジェクトの良かった点や感想を教えてください<span className="text-red-500">（必須）</span>
             </p>

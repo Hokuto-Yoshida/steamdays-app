@@ -38,7 +38,7 @@ export default function Home() {
       gradient: 'linear-gradient(90deg,#60A5FA,#34D399)'
     },
     {
-      icon: '💖',
+      icon: '🗳️',
       title: '投票システム',
       description: '気に入ったプロジェクトに投票して応援メッセージを届けよう（1人1票）',
       gradient: 'linear-gradient(90deg,#FB7185,#FDBAFA)'
@@ -176,7 +176,32 @@ export default function Home() {
 
       {/* メインコンテンツ */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* 説明セクション */}
+        {/* STEAMDAYS!!とは説明セクション */}
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-800 mb-6">
+            STEAMDAYS!!とは
+          </h2>
+          <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8 border">
+            <p className="text-gray-700 text-lg leading-relaxed mb-6">
+              次世代を担う中高生がクリエイティブな発想・好奇心を発揮し、デジタルスキルを活用して地域課題・社会課題解決を実践するプログラムです
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <a 
+                href="https://steamdays.innodrops.org/contest-saga2025/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-medium transition-colors shadow-md hover:shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                イベント詳細を見る
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* 参加チームプロジェクト体験セクション */}
         <div className="text-center mb-8">
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">
             参加チームのプロジェクトを体験しよう！
@@ -272,7 +297,7 @@ export default function Home() {
               {currentFeature === 1 && (
                 <>
                   <div>
-                    <h4 className="font-semibold text-gray-800 mb-2">💖 投票システム</h4>
+                    <h4 className="font-semibold text-gray-800 mb-2">🗳️ 投票システム</h4>
                     <ul className="space-y-1 text-gray-600">
                       <li>• 1人1票の公平な投票制度</li>
                       <li>• 感想・コメント必須入力</li>
@@ -334,76 +359,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* 投票方法の説明セクション */}
-        <div className="mb-8 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="text-2xl">🗳️</span>
-            投票方法について
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">投票ルール</h4>
-              <ul className="space-y-2 text-gray-600 text-sm">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-600 font-bold">1.</span>
-                  <span><strong>1人1票</strong>：お一人様につき、1つのプロジェクトにのみ投票できます</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-600 font-bold">2.</span>
-                  <span><strong>コメント必須</strong>：投票時には感想や理由を必ず入力してください</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-600 font-bold">3.</span>
-                  <span><strong>変更不可</strong>：一度投票すると変更できませんので、慎重にお選びください</span>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">投票手順</h4>
-              <ol className="space-y-2 text-gray-600 text-sm">
-                <li className="flex items-start gap-2">
-                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">1</span>
-                  <span>各チームページでプロジェクトを体験</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">2</span>
-                  <span>気に入ったプロジェクトで「投票する」ボタンをクリック</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">3</span>
-                  <span>感想・理由を入力して投票完了</span>
-                </li>
-              </ol>
-            </div>
-          </div>
-        </div>
-
-        {/* チャット利用ガイド */}
-        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h4 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            全体チャットをご活用ください
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
-            <div className="flex items-start gap-2">
-              <span className="text-blue-500">💬</span>
-              <div>
-                <p className="font-medium">リアルタイム交流</p>
-                <p className="text-blue-600">他の参加者とリアルタイムでやり取りできます</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-500">🤝</span>
-              <div>
-                <p className="font-medium">感想や質問を共有</p>
-                <p className="text-blue-600">プロジェクトについての感想や質問を気軽に投稿しましょう</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* ライブ中のチーム専用セクション */}
         {teams.some(team => team.status === 'live') && (

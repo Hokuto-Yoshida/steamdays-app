@@ -28,7 +28,6 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
   const [isConnected, setIsConnected] = useState(false);
   const [resetting, setResetting] = useState(false);
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // セッションから名前を自動設定
@@ -38,23 +37,16 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
     }
   }, [session, authorName]);
 
-  // メッセージを最下部にスクロール
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   // 初回メッセージ読み込み
-  const fetchMessages = async (showLoading = true) => {
+  const fetchMessages = async () => {
     try {
-      if (showLoading) setLoading(true);
-      
+      setLoading(true);
       const response = await fetch(`/api/teams/${teamId}/chat?limit=100`);
       const result = await response.json();
       
       if (result.success) {
         setMessages(result.data || []);
         setIsConnected(true);
-        setTimeout(scrollToBottom, 100);
       } else {
         console.error('チームチャットメッセージ取得エラー:', result.error);
         setIsConnected(false);
@@ -63,22 +55,32 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
       console.error('チームチャット読み込みエラー:', error);
       setIsConnected(false);
     } finally {
-      if (showLoading) setLoading(false);
+      setLoading(false);
     }
   };
 
-  // 新しいメッセージをポーリング
+  // 新しいメッセージをポーリング（完全静的）
   const pollNewMessages = async () => {
-    if (messages.length === 0) return;
-    
     try {
-      const lastMessage = messages[messages.length - 1];
-      const response = await fetch(`/api/teams/${teamId}/chat?since=${lastMessage.timestamp}`);
+      // messagesが空の場合は全メッセージを取得
+      let url = `/api/teams/${teamId}/chat?limit=100`;
+      
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        url = `/api/teams/${teamId}/chat?since=${lastMessage.timestamp}`;
+      }
+      
+      const response = await fetch(url);
       const result = await response.json();
       
-      if (result.success && result.data.length > 0) {
-        setMessages(prev => [...prev, ...result.data]);
-        setTimeout(scrollToBottom, 100);
+      if (result.success) {
+        if (messages.length === 0) {
+          // 初回または空の場合は全て設定
+          setMessages(result.data || []);
+        } else if (result.data.length > 0) {
+          // 新着メッセージがあれば追加
+          setMessages(prev => [...prev, ...result.data]);
+        }
       }
       setIsConnected(true);
     } catch (error) {
@@ -90,8 +92,6 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
   // ポーリング開始
   useEffect(() => {
     fetchMessages();
-    
-    // 3秒間隔でポーリング
     pollIntervalRef.current = setInterval(pollNewMessages, 3000);
 
     return () => {
@@ -99,9 +99,9 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, [messages.length, teamId]);
+  }, [teamId]); // messages.lengthを依存配列から削除
 
-  // メッセージ送信
+  // メッセージ送信（完全静的）
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -124,9 +124,8 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
       
       if (result.success) {
         setNewMessage('');
-        // 新しいメッセージを即座に表示
+        // メッセージを配列に追加するだけ - 他に何もしない
         setMessages(prev => [...prev, result.data]);
-        setTimeout(scrollToBottom, 100);
       } else {
         alert('メッセージ送信に失敗しました: ' + result.error);
       }
@@ -191,7 +190,7 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow-lg border h-80 flex flex-col ${className}`}>
+    <div className={`bg-white rounded-lg shadow-lg border h-[640px] flex flex-col ${className}`}>
       {/* チャットヘッダー */}
       <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-orange-50 to-yellow-50 rounded-t-lg">
         <div className="flex items-center gap-3">
@@ -251,7 +250,7 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
         </div>
       </div>
 
-      {/* メッセージエリア */}
+      {/* メッセージエリア - 完全静的 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-orange-50/30">
         {loading ? (
           <div className="flex justify-center items-center h-full">
@@ -266,24 +265,18 @@ export default function TeamChat({ teamId, teamName, className = '' }: TeamChatP
         ) : (
           messages.map((message) => (
             <div key={message._id} className="flex items-start gap-2 text-sm">
-              {/* タイムスタンプ */}
               <span className="text-xs text-gray-400 mt-0.5 min-w-[3rem]">
                 {formatTime(message.timestamp)}
               </span>
-              
-              {/* ユーザー名 */}
               <span className={`font-medium min-w-[4rem] truncate ${getUserColor(message.author)}`}>
                 {message.author}:
               </span>
-              
-              {/* メッセージ内容 */}
               <span className="text-gray-800 break-words flex-1">
                 {message.message}
               </span>
             </div>
           ))
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* メッセージ入力エリア */}

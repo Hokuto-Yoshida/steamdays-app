@@ -15,6 +15,7 @@ interface TeamStats {
   scratchUrl: string;
   status?: string;
   editingAllowed?: boolean;
+  sortOrder?: number; // 追加: 表示順序
 }
 
 interface UserStats {
@@ -56,7 +57,110 @@ export default function Admin() {
   const [userFilter, setUserFilter] = useState('all');
   const [userSearch, setUserSearch] = useState('');
 
-  // 🆕 編集権限切り替え関数
+  // ドラッグ&ドロップ関連のstate
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedTeam, setDraggedTeam] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<'votes' | 'custom'>('votes'); // 投票順 or カスタム順
+
+  // チーム順序更新関数
+  const updateTeamOrder = async (newOrder: TeamStats[]) => {
+    try {
+      setSetupStatus('🔄 チーム順序を更新中...');
+      
+      const orderData = newOrder.map((team, index) => ({
+        id: team.id,
+        sortOrder: index
+      }));
+
+      const response = await fetch('/api/admin/teams/order', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ order: orderData })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSetupStatus('✅ チーム順序を更新しました');
+        fetchStats(); // 再読み込み
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Team order update error:', error);
+      setSetupStatus(`❌ 順序更新に失敗しました: ${error}`);
+    }
+  };
+
+  // ドラッグ開始
+  const handleDragStart = (e: React.DragEvent, teamId: string) => {
+    setIsDragging(true);
+    setDraggedTeam(teamId);
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // ドラッグ中の視覚効果
+    if (e.target instanceof HTMLElement) {
+      e.target.style.opacity = '0.5';
+    }
+  };
+
+  // ドラッグ終了
+  const handleDragEnd = (e: React.DragEvent) => {
+    setIsDragging(false);
+    setDraggedTeam(null);
+    
+    if (e.target instanceof HTMLElement) {
+      e.target.style.opacity = '1';
+    }
+  };
+
+  // ドラッグオーバー
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  // ドロップ
+  const handleDrop = (e: React.DragEvent, dropTargetId: string) => {
+    e.preventDefault();
+    
+    if (!draggedTeam || draggedTeam === dropTargetId) {
+      return;
+    }
+
+    const draggedIndex = teams.findIndex(team => team.id === draggedTeam);
+    const dropIndex = teams.findIndex(team => team.id === dropTargetId);
+
+    if (draggedIndex === -1 || dropIndex === -1) {
+      return;
+    }
+
+    // 配列を再並び替え
+    const newTeams = [...teams];
+    const draggedTeamData = newTeams[draggedIndex];
+    newTeams.splice(draggedIndex, 1);
+    newTeams.splice(dropIndex, 0, draggedTeamData);
+
+    setTeams(newTeams);
+    updateTeamOrder(newTeams);
+  };
+
+  // ソートモード切り替え
+  const toggleSortMode = () => {
+    const newMode = sortMode === 'votes' ? 'custom' : 'votes';
+    setSortMode(newMode);
+    
+    if (newMode === 'votes') {
+      // 投票数順にソート
+      const sortedTeams = [...teams].sort((a, b) => b.hearts - a.hearts);
+      setTeams(sortedTeams);
+      updateTeamOrder(sortedTeams);
+    }
+  };
+
+  // 編集権限切り替え関数
   const toggleEditPermission = async (teamId: string, currentStatus: boolean) => {
     if (!confirm(`チーム${teamId}の編集権限を${currentStatus ? '無効' : '有効'}にしますか？\n\n${
       currentStatus ? '発表者による編集ができなくなります。' : '発表者が自分で編集できるようになります。'
@@ -80,7 +184,6 @@ export default function Admin() {
       const result = await response.json();
       
       if (result.success) {
-        // チームデータを更新
         setTeams(teams.map(team => 
           team.id === teamId 
             ? { ...team, editingAllowed: !currentStatus }
@@ -118,7 +221,7 @@ export default function Admin() {
       
       if (result.success) {
         setSetupStatus(`✅ チーム「${teamName}」を削除しました`);
-        fetchStats(); // 再読み込み
+        fetchStats();
       } else {
         throw new Error(result.error);
       }
@@ -128,7 +231,7 @@ export default function Admin() {
     }
   };
 
-  // 投票完全リセット関数 (他の関数と一緒に追加)
+  // 投票完全リセット関数
   const resetAllVotes = async () => {
     const confirmMessage = `⚠️ 全ての投票データを完全にリセットしますか？\n\n削除される内容:\n・全ての投票履歴\n・全チームの投票数(ハート)\n・全てのコメント\n\nこの操作は取り消せません。\n\n本当に実行しますか？`;
     
@@ -136,7 +239,6 @@ export default function Admin() {
       return;
     }
     
-    // 二重確認
     const finalConfirm = prompt('リセットを実行するには "RESET" と入力してください:', '');
     if (finalConfirm !== 'RESET') {
       setSetupStatus('❌ リセットがキャンセルされました');
@@ -158,7 +260,6 @@ export default function Admin() {
       
       if (result.success) {
         setSetupStatus(`✅ ${result.message}`);
-        // 統計を再読み込み
         fetchStats();
       } else {
         throw new Error(result.message || result.error);
@@ -175,17 +276,23 @@ export default function Admin() {
   const fetchStats = async () => {
     setRefreshing(true);
     try {
-      // チームデータ取得
       const teamsResponse = await fetch('/api/teams');
       if (teamsResponse.ok) {
         const teamsResult = await teamsResponse.json();
         if (teamsResult.success && teamsResult.data) {
-          const teamsData: TeamStats[] = teamsResult.data;
+          let teamsData: TeamStats[] = teamsResult.data;
+          
+          // ソートモードに応じて並び替え
+          if (sortMode === 'custom') {
+            teamsData.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+          } else {
+            teamsData.sort((a, b) => b.hearts - a.hearts);
+          }
+          
           setTeams(teamsData);
           
           const totalVotes = teamsData.reduce((sum: number, team: TeamStats) => sum + team.hearts, 0);
           
-          // topTeamの安全な取得
           let topTeam: { name: string; hearts: number } | null = null;
           if (teamsData.length > 0) {
             const maxHeartsTeam = teamsData.reduce((prev: TeamStats, current: TeamStats) => 
@@ -194,7 +301,6 @@ export default function Admin() {
             topTeam = { name: maxHeartsTeam.name, hearts: maxHeartsTeam.hearts };
           }
 
-          // ユーザーデータ取得
           const usersResponse = await fetch('/api/users');
           let activeUsersCount = 0;
           
@@ -204,12 +310,7 @@ export default function Admin() {
               const usersData: UserStats[] = usersResult.data;
               setUsers(usersData);
               activeUsersCount = usersData.filter(u => u.isActive).length;
-              console.log(`👥 ユーザー取得成功: ${usersData.length}名`);
-            } else {
-              console.error('ユーザー取得エラー:', usersResult.error);
             }
-          } else {
-            console.error('ユーザーAPI呼び出しエラー:', usersResponse.status);
           }
 
           const statsData: AdminStats = {
@@ -229,7 +330,7 @@ export default function Admin() {
     }
   };
 
-  // チーム作成関数（IDは自動生成）
+  // チーム作成関数
   const createTeam = async () => {
     if (!newTeamData.name) {
       alert('チーム名は必須です');
@@ -238,7 +339,6 @@ export default function Admin() {
 
     setTeamCreating(true);
     try {
-      // IDは既存チーム数+1で自動生成
       const newId = (teams.length + 1).toString();
       
       const response = await fetch('/api/admin/teams', {
@@ -257,7 +357,7 @@ export default function Admin() {
         setSetupStatus(`✅ ${result.message}`);
         setNewTeamData({ name: '', title: '' });
         setShowCreateTeam(false);
-        fetchStats(); // 再読み込み
+        fetchStats();
       } else {
         alert(`エラー: ${result.error}`);
       }
@@ -286,7 +386,7 @@ export default function Admin() {
       
       if (result.success) {
         setSetupStatus(`✅ ユーザーステータスを${newStatus ? '有効' : '無効'}に変更しました`);
-        fetchStats(); // 再読み込み
+        fetchStats();
       } else {
         alert(`エラー: ${result.error}`);
       }
@@ -311,7 +411,7 @@ export default function Admin() {
       
       if (result.success) {
         setSetupStatus(`✅ ユーザー「${userName}」を削除しました`);
-        fetchStats(); // 再読み込み
+        fetchStats();
       } else {
         alert(`エラー: ${result.error}`);
       }
@@ -338,15 +438,12 @@ export default function Admin() {
 
   useEffect(() => {
     fetchStats();
-    // 30秒ごとに自動更新
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const handleTeamStatusChange = async (teamId: string, newStatus: string) => {
     try {
-      console.log(`🔄 チーム${teamId}のステータスを${newStatus}に変更中...`);
-      
       const response = await fetch(`/api/teams/${teamId}/status`, {
         method: 'PUT',
         headers: {
@@ -359,7 +456,6 @@ export default function Admin() {
       
       if (result.success) {
         setSetupStatus(`✅ ${result.message}`);
-        // チーム一覧を再読み込み
         fetchStats();
       } else {
         alert(`ステータス更新に失敗しました: ${result.error}`);
@@ -388,7 +484,6 @@ export default function Admin() {
     return colorMap[role] || 'bg-gray-100 text-gray-800';
   };
 
-  // フィルター済みユーザー
   const filteredUsers = users.filter(user => {
     const matchesFilter = userFilter === 'all' || user.role === userFilter;
     const matchesSearch = userSearch === '' || 
@@ -417,7 +512,6 @@ export default function Admin() {
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-
         {/* ステータス表示 */}
         {setupStatus && (
           <div className="mb-8 p-4 bg-white rounded-lg shadow-sm border-l-4 border-blue-400">
@@ -425,7 +519,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* 統計カード（コメント数削除、3列レイアウト） */}
+        {/* 統計カード */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm border p-6 flex items-center justify-between">
             <div>
@@ -458,6 +552,7 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* 投票完全リセット */}
         <div className="mb-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <div className="flex items-center justify-between">
@@ -473,7 +568,7 @@ export default function Admin() {
               <button
                 onClick={resetAllVotes}
                 disabled={loading}
-                className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 disabled:bg-gray-400 transition-colors font-medium"
+                className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 disabled:bg-gray-400 transition-colors font-medium text-gray-900 placeholder-gray-500"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -487,17 +582,52 @@ export default function Admin() {
         <div className="grid grid-cols-1 gap-8 mb-8">
           {/* チーム管理パネル */}
           <div className="bg-white rounded-lg shadow-sm border">
-            <div className="p-6 border-b border-gray-200 flex items-center gap-2">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <h2 className="text-xl font-bold">チーム管理</h2>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <h2 className="text-xl font-bold">チーム管理</h2>
+              </div>
+              
+              {/* ソートモード切り替えボタン */}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={toggleSortMode}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    sortMode === 'custom' 
+                      ? 'bg-purple-500 text-white' 
+                      : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  {sortMode === 'custom' ? (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                      </svg>
+                      カスタム順序モード
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                      投票数順
+                    </>
+                  )}
+                </button>
+                
+                {sortMode === 'custom' && (
+                  <div className="text-sm text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+                    ドラッグして順序変更
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* チーム作成機能 */}
             <div className="p-6 border-b border-gray-200">
               <div className="flex flex-col sm:flex-row gap-4">
-                {/* 個別作成ボタン */}
                 <button
                   onClick={() => setShowCreateTeam(!showCreateTeam)}
                   className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
@@ -509,7 +639,6 @@ export default function Admin() {
                 </button>
               </div>
 
-              {/* 個別作成フォーム（IDフィールド削除） */}
               {showCreateTeam && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
                   <h3 className="text-lg font-semibold mb-3">新しいチーム作成</h3>
@@ -523,19 +652,19 @@ export default function Admin() {
                         value={newTeamData.name}
                         onChange={(e) => setNewTeamData({...newTeamData, name: e.target.value})}
                         placeholder="チーム7 - イノベート"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         プロジェクトタイトル
-                      </label>
+                      </label>                     
                       <input
                         type="text"
                         value={newTeamData.title}
                         onChange={(e) => setNewTeamData({...newTeamData, title: e.target.value})}
                         placeholder="(オプション)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
                       />
                     </div>
                   </div>
@@ -567,16 +696,44 @@ export default function Admin() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {teams
-                    .sort((a, b) => b.hearts - a.hearts)
-                    .map((team, index) => (
-                    <div key={team.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  {teams.map((team, index) => (
+                    <div 
+                      key={team.id} 
+                      className={`border border-gray-200 rounded-lg p-4 transition-all duration-200 ${
+                        sortMode === 'custom' 
+                          ? 'cursor-move hover:shadow-md bg-gray-50' 
+                          : 'bg-gray-50'
+                      } ${isDragging && draggedTeam === team.id ? 'opacity-50 transform scale-95' : ''}`}
+                      draggable={sortMode === 'custom'}
+                      onDragStart={(e) => handleDragStart(e, team.id)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, team.id)}
+                    >
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            {index === 0 && <span className="text-yellow-500">🏆</span>}
-                            {index === 1 && <span className="text-gray-400">🥈</span>}
-                            {index === 2 && <span className="text-orange-400">🥉</span>}
+                            {/* ドラッグハンドル */}
+                            {sortMode === 'custom' && (
+                              <svg className="w-4 h-4 text-gray-400 cursor-move" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                              </svg>
+                            )}
+                            
+                            {/* 順位表示 */}
+                            <span className="bg-white px-2 py-1 rounded text-sm font-bold text-gray-600">
+                              #{index + 1}
+                            </span>
+                            
+                            {/* トロフィー（投票順の場合のみ） */}
+                            {sortMode === 'votes' && (
+                              <>
+                                {index === 0 && <span className="text-yellow-500">🏆</span>}
+                                {index === 1 && <span className="text-gray-400">🥈</span>}
+                                {index === 2 && <span className="text-orange-400">🥉</span>}
+                              </>
+                            )}
+                            
                             <h3 className="text-lg font-bold">{team.title}</h3>
                           </div>
                           <p className="text-purple-600 text-sm mb-1">チーム: {team.name}</p>
@@ -585,11 +742,10 @@ export default function Admin() {
                           </p>
                         </div>
                         <div className="ml-4 flex items-center gap-2">
-                          {/* ステータス変更ドロップダウン */}
                           <select
                             value={team.status || 'upcoming'}
                             onChange={(e) => handleTeamStatusChange(team.id, e.target.value)}
-                            className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
+                            className="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900"
                           >
                             <option value="upcoming">開始前</option>
                             <option value="live">ピッチ中</option>
@@ -600,7 +756,6 @@ export default function Admin() {
 
                       {/* ステータスバッジ表示 */}
                       <div className="flex items-center gap-2 mb-3">
-                        {/* ピッチステータス */}
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           team.status === 'live' 
                             ? 'bg-red-100 text-red-800 animate-pulse' 
@@ -613,7 +768,6 @@ export default function Admin() {
                           {team.status === 'upcoming' && '⏳ 開始前'}
                         </span>
                         
-                        {/* 編集権限ステータス */}
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           team.editingAllowed
                             ? 'bg-green-100 text-green-800'
@@ -655,7 +809,6 @@ export default function Admin() {
                           管理者編集
                         </Link>
                         
-                        {/* 編集権限切り替えボタン */}
                         <button
                           onClick={() => toggleEditPermission(team.id, team.editingAllowed || false)}
                           className={`flex items-center gap-1 px-3 py-1 text-sm rounded transition-colors ${
@@ -663,7 +816,6 @@ export default function Admin() {
                               ? 'bg-red-100 text-red-700 hover:bg-red-200'
                               : 'bg-green-100 text-green-700 hover:bg-green-200'
                           }`}
-                          title={team.editingAllowed ? '発表者の編集権限を無効にする' : '発表者の編集権限を有効にする'}
                         >
                           {team.editingAllowed ? (
                             <>
@@ -684,7 +836,6 @@ export default function Admin() {
                         <button
                           onClick={() => deleteTeam(team.id, team.name)}
                           className="flex items-center gap-1 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                          title="チームを削除"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
