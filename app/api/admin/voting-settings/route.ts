@@ -5,6 +5,9 @@ import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import VotingSettings from '@/lib/models/VotingSettings';
 
+// 動的ルートとして強制
+export const dynamic = 'force-dynamic';
+
 // 投票設定取得
 export async function GET() {
   try {
@@ -12,7 +15,6 @@ export async function GET() {
     
     let settings = await VotingSettings.findOne();
     
-    // 設定が存在しない場合は初期化
     if (!settings) {
       settings = new VotingSettings({
         isVotingOpen: true,
@@ -43,7 +45,6 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // 管理者権限チェック
     if (!session?.user || session.user.role !== 'admin') {
       return NextResponse.json({
         success: false,
