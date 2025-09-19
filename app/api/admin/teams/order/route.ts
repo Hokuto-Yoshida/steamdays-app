@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Team } from '@/lib/models/Team';
 
+export const dynamic = 'force-dynamic';
+
 export async function PUT(request: NextRequest) {
   try {
     console.log('🔄 チーム順序更新リクエスト受信');
