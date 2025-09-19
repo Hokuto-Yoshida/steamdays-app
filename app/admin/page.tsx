@@ -55,19 +55,26 @@ export default function Admin() {
   // 投票設定取得
   const fetchVotingSettings = async () => {
     try {
-      // 既存のAPIから投票設定を取得（まずは固定値で）
-      setVotingSettings({
-        isVotingOpen: true  // デフォルトは受付中
-      });
+      const response = await fetch('/api/admin/voting-settings');
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setVotingSettings(result.data);
+        }
+      }
     } catch (error) {
       console.error('投票設定取得エラー:', error);
     }
   };
 
-  // Admin.tsx の toggleVoting 関数を修正
+  // 投票締め切り/再開
   const toggleVoting = async () => {
     const action = votingSettings.isVotingOpen ? '締め切り' : '再開';
-    const confirmMessage = `投票を${action}しますか？`;
+    const confirmMessage = `投票を${action}しますか？\n\n${
+      votingSettings.isVotingOpen 
+        ? '投票を締め切ると、参加者は投票できなくなります。' 
+        : '投票を再開すると、参加者が再び投票できるようになります。'
+    }`;
     
     if (!confirm(confirmMessage)) {
       return;
@@ -77,13 +84,12 @@ export default function Admin() {
     try {
       setSetupStatus(`🔄 投票を${action}中...`);
       
-      const response = await fetch('/api/admin/teams', {
-        method: 'PATCH',
+      const response = await fetch('/api/admin/voting-settings', {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          action: 'updateVotingSettings',
           isVotingOpen: !votingSettings.isVotingOpen
         })
       });
@@ -91,11 +97,8 @@ export default function Admin() {
       const result = await response.json();
       
       if (result.success) {
-        setVotingSettings({
-          isVotingOpen: !votingSettings.isVotingOpen,
-          [!votingSettings.isVotingOpen ? 'openedAt' : 'closedAt']: new Date()
-        });
-        setSetupStatus(`✅ ${result.message}`);
+        setVotingSettings(result.data);
+        setSetupStatus(`✅ 投票を${action}しました`);
       } else {
         throw new Error(result.error);
       }

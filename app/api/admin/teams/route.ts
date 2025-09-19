@@ -166,42 +166,6 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { action, isVotingOpen } = body;
-    
-    console.log('🔧 PATCH request received:', { action, isVotingOpen });
-    
-    if (action === 'updateVotingSettings') {
-      console.log('🗳️ 投票設定更新リクエスト');
-      
-      // 簡単な実装：メモリ上で管理（本格的にはDBに保存）
-      // とりあえず動作確認のために固定レスポンス
-      return NextResponse.json({
-        success: true,
-        message: `投票を${isVotingOpen ? '再開' : '締め切り'}ました`,
-        data: {
-          isVotingOpen: isVotingOpen,
-          [isVotingOpen ? 'openedAt' : 'closedAt']: new Date()
-        }
-      });
-    }
-    
-    return NextResponse.json({
-      success: false,
-      error: '不正なアクション'
-    }, { status: 400 });
-    
-  } catch (error) {
-    console.error('❌ PATCH エラー:', error);
-    return NextResponse.json({
-      success: false,
-      error: '処理に失敗しました'
-    }, { status: 500 });
-  }
-}
-
 // テスト用GET
 export async function GET() {
   try {
