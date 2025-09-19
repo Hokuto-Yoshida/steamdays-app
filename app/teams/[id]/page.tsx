@@ -34,6 +34,12 @@ interface VoteStatus {
   votedTeam?: { id: string; name: string; title: string } | null;
 }
 
+interface VotingSettings {
+  isVotingOpen: boolean;
+  closedAt?: Date;
+  openedAt?: Date;
+}
+
 // SVG投票アイコンコンポーネント
 const VoteIcon = ({ size = 24, className = '' }) => (
   <svg width={size} height={size} className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -490,6 +496,11 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
     votedTeam: null 
   });
 
+  // 🗳️ 投票設定の状態を追加
+  const [votingSettings, setVotingSettings] = useState<VotingSettings>({
+    isVotingOpen: true
+  });
+
   useEffect(() => {
     const resolveParams = async () => {
       const resolvedParams = await params;
@@ -497,6 +508,22 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
     };
     resolveParams();
   }, [params]);
+
+  // 投票設定取得関数
+  const fetchVotingSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/voting-settings');
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setVotingSettings(result.data);
+          console.log('投票設定:', result.data.isVotingOpen ? '受付中' : '締切済み');
+        }
+      }
+    } catch (error) {
+      console.error('投票設定取得エラー:', error);
+    }
+  };
 
   useEffect(() => {
     if (!teamId) return;
@@ -536,6 +563,9 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
           console.log('投票ステータス:', voteStatusResult.hasVoted ? 
             `投票済み（${voteStatusResult.votedTeam?.name}）` : '未投票');
         }
+
+        // 3. 投票設定取得
+        await fetchVotingSettings();
         
       } catch (error) {
         console.error('Fetch error:', error);
@@ -547,8 +577,18 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
     fetchTeamAndVoteStatus();
   }, [teamId]);
 
-  // 投票ボタンの表示内容を決定
+  // 投票ボタンの表示内容を決定（投票締切対応）
   const getVoteButtonContent = () => {
+    // 投票締切チェック
+    if (!votingSettings.isVotingOpen) {
+      return (
+        <div className="flex items-center justify-center gap-2">
+          <span className="text-lg">🔒</span>
+          <span>投票受付終了</span>
+        </div>
+      );
+    }
+
     if (globalVoteStatus.hasVoted) {
       if (globalVoteStatus.votedTeam && globalVoteStatus.votedTeam.id === teamId) {
         return (
@@ -578,8 +618,13 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
     );
   };
 
-  // 投票ボタンのスタイルを決定
+  // 投票ボタンのスタイルを決定（投票締切対応）
   const getVoteButtonStyle = () => {
+    // 投票締切時のスタイル
+    if (!votingSettings.isVotingOpen) {
+      return 'bg-gray-400 text-white cursor-not-allowed';
+    }
+
     if (globalVoteStatus.hasVoted) {
       return 'bg-gray-300 text-gray-500 cursor-not-allowed';
     }
@@ -592,6 +637,18 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
   };
 
   const handleVote = async () => {
+    // 投票締切チェック
+    if (!votingSettings.isVotingOpen) {
+      const closedAt = votingSettings.closedAt 
+        ? new Date(votingSettings.closedAt).toLocaleString('ja-JP')
+        : '';
+      const message = closedAt 
+        ? `投票は ${closedAt} に締め切られました。`
+        : '投票は締め切られています。';
+      alert(`投票受付を終了しています。${message}`);
+      return;
+    }
+
     if (!team || voting || globalVoteStatus.hasVoted || !teamId) return;
 
     setVoting(true);
@@ -640,7 +697,12 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
         markTeamAsVoted(teamId);
         alert(`${team.name}に投票しました！`);
       } else {
-        if (result.error === 'Already voted') {
+        if (result.error === 'VOTING_CLOSED') {
+          // 投票締切エラーの場合
+          alert(result.message || '投票は締め切られています。');
+          // 投票設定を再取得して最新状態に更新
+          await fetchVotingSettings();
+        } else if (result.error === 'Already voted') {
           // 既に投票済みの場合、グローバルステータスを更新
           setGlobalVoteStatus({
             hasVoted: true,
@@ -929,56 +991,84 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
               </div>
             </div>
 
-            {/* 2. 投票セクション（修正版） */}
+            {/* 2. 投票セクション（投票締切対応版） */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-2xl">🗳️</span>
                 <h3 className="text-lg font-semibold">このプロジェクトを応援</h3>
               </div>
               
-              {/* 投票ルール説明 */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <h4 className="font-medium text-gray-700 mb-2">投票ルール</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li className="flex items-start gap-2">
-                    <span className="text-yellow-600 font-bold mt-0.5">•</span>
-                    <span><strong>1人1票</strong>：お一人様につき、1つのプロジェクトにのみ投票できます</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-yellow-600 font-bold mt-0.5">•</span>
-                    <span><strong>コメント必須</strong>：投票時には感想や理由を必ず入力してください</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-yellow-600 font-bold mt-0.5">•</span>
-                    <span><strong>変更不可</strong>：一度投票すると変更できません</span>
-                  </li>
-                </ul>
-              </div>
+              {/* 投票締切メッセージ */}
+              {!votingSettings.isVotingOpen && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-red-600 text-lg">🔒</span>
+                    <h4 className="font-semibold text-red-800">投票受付終了</h4>
+                  </div>
+                  <p className="text-red-700 text-sm">
+                    投票受付は終了いたしました。
+                    {votingSettings.closedAt && (
+                      <span className="block text-xs text-red-600 mt-1">
+                        終了日時: {new Date(votingSettings.closedAt).toLocaleString('ja-JP')}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+              
+              {/* 投票ルール説明（投票受付中のみ表示） */}
+              {votingSettings.isVotingOpen && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-medium text-gray-700 mb-2">投票ルール</h4>
+                  <ul className="space-y-1 text-sm text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                      <span><strong>1人1票</strong>：お一人様につき、1つのプロジェクトにのみ投票できます</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                      <span><strong>コメント必須</strong>：投票時には感想や理由を必ず入力してください</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                      <span><strong>変更不可</strong>：一度投票すると変更できません</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
               
               {/* 投票ステータスによる表示切り替え */}
-              {globalVoteStatus.hasVoted ? (
-                <div className="text-center mb-4">
-                  <p className="text-gray-600 text-sm mb-2">
-                    {globalVoteStatus.votedTeam?.id === teamId 
-                      ? 'このプロジェクトに投票していただきありがとうございます！'
-                      : `「${globalVoteStatus.votedTeam?.name}」に投票済みです`
-                    }
-                  </p>
-                  {globalVoteStatus.votedTeam?.id !== teamId && (
-                    <p className="text-gray-500 text-xs">
-                      投票は1人1回までです
+              {votingSettings.isVotingOpen ? (
+                globalVoteStatus.hasVoted ? (
+                  <div className="text-center mb-4">
+                    <p className="text-gray-600 text-sm mb-2">
+                      {globalVoteStatus.votedTeam?.id === teamId 
+                        ? 'このプロジェクトに投票していただきありがとうございます！'
+                        : `「${globalVoteStatus.votedTeam?.name}」に投票済みです`
+                      }
                     </p>
-                  )}
-                </div>
+                    {globalVoteStatus.votedTeam?.id !== teamId && (
+                      <p className="text-gray-500 text-xs">
+                        投票は1人1回までです
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-600 text-sm mb-4 text-center">
+                    気に入ったプロジェクトに投票して応援しましょう
+                  </p>
+                )
               ) : (
-                <p className="text-gray-600 text-sm mb-4 text-center">
-                  気に入ったプロジェクトに投票して応援しましょう
-                </p>
+                <div className="text-center mb-4">
+                  <p className="text-gray-600 text-sm">
+                    たくさんのご参加ありがとうございました！
+                  </p>
+                </div>
               )}
               
               <button
-                onClick={() => setShowVoteModal(true)}
-                disabled={globalVoteStatus.hasVoted || voting}
+                onClick={() => votingSettings.isVotingOpen && setShowVoteModal(true)}
+                disabled={!votingSettings.isVotingOpen || globalVoteStatus.hasVoted || voting}
                 className={`w-full py-3 rounded-md font-medium transition-colors ${getVoteButtonStyle()}`}
               >
                 {getVoteButtonContent()}
@@ -988,10 +1078,8 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
         </div>
       </main>
 
-      {/* 元の右下固定キーボードボタンは削除 */}
-
-      {/* 投票モーダル */}
-      {showVoteModal && (
+      {/* 投票モーダル（投票締切チェック付き） */}
+      {showVoteModal && votingSettings.isVotingOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <div className="flex items-center gap-2 mb-4">

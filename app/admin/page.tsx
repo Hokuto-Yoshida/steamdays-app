@@ -29,11 +29,20 @@ interface UserStats {
   lastLogin?: string;
 }
 
+interface VotingSettings {
+  isVotingOpen: boolean;
+  closedAt?: Date;
+  openedAt?: Date;
+}
+
 export default function Admin() {
   const [setupStatus, setSetupStatus] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState<TeamStats[]>([]);
   const [users, setUsers] = useState<UserStats[]>([]);
+  const [votingSettings, setVotingSettings] = useState<VotingSettings>({
+    isVotingOpen: true
+  });
   
   // チーム作成関連
   const [teamCreating, setTeamCreating] = useState(false);
@@ -42,6 +51,64 @@ export default function Admin() {
     name: '',
     title: ''
   });
+
+  // 投票設定取得
+  const fetchVotingSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/voting-settings');
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setVotingSettings(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('投票設定取得エラー:', error);
+    }
+  };
+
+  // 投票締め切り/再開
+  const toggleVoting = async () => {
+    const action = votingSettings.isVotingOpen ? '締め切り' : '再開';
+    const confirmMessage = `投票を${action}しますか？\n\n${
+      votingSettings.isVotingOpen 
+        ? '投票を締め切ると、参加者は投票できなくなります。' 
+        : '投票を再開すると、参加者が再び投票できるようになります。'
+    }`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      setSetupStatus(`🔄 投票を${action}中...`);
+      
+      const response = await fetch('/api/admin/voting-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isVotingOpen: !votingSettings.isVotingOpen
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setVotingSettings(result.data);
+        setSetupStatus(`✅ 投票を${action}しました`);
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('投票設定更新エラー:', error);
+      setSetupStatus(`❌ 投票${action}に失敗しました: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // チーム順序更新関数
   const updateTeamOrder = async (newOrder: TeamStats[]) => {
@@ -313,7 +380,11 @@ export default function Admin() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
+    fetchVotingSettings();
+    const interval = setInterval(() => {
+      fetchData();
+      fetchVotingSettings();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -334,6 +405,78 @@ export default function Admin() {
             <p className="font-medium">{setupStatus}</p>
           </div>
         )}
+
+        {/* 投票管理パネル */}
+        <div className="mb-8">
+          <div className={`border rounded-lg p-6 ${
+            votingSettings.isVotingOpen 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    votingSettings.isVotingOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                  }`}></div>
+                  <h3 className={`text-xl font-bold ${
+                    votingSettings.isVotingOpen ? 'text-green-800' : 'text-red-800'
+                  }`}>
+                    🗳️ 投票管理
+                  </h3>
+                </div>
+                <p className={`text-sm mb-2 ${
+                  votingSettings.isVotingOpen ? 'text-green-700' : 'text-red-700'
+                }`}>
+                  現在の状態: <span className="font-semibold">
+                    {votingSettings.isVotingOpen ? '投票受付中' : '投票締切済み'}
+                  </span>
+                </p>
+                {votingSettings.closedAt && !votingSettings.isVotingOpen && (
+                  <p className="text-xs text-red-600">
+                    締切日時: {new Date(votingSettings.closedAt).toLocaleString('ja-JP')}
+                  </p>
+                )}
+                {votingSettings.openedAt && votingSettings.isVotingOpen && (
+                  <p className="text-xs text-green-600">
+                    開始日時: {new Date(votingSettings.openedAt).toLocaleString('ja-JP')}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={toggleVoting}
+                disabled={loading}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 ${
+                  votingSettings.isVotingOpen
+                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                    : 'bg-green-500 hover:bg-green-600 text-white'
+                }`}
+              >
+                {votingSettings.isVotingOpen ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    {loading ? '締切中...' : '投票を締め切る'}
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.586a1 1 0 01.707.293l1.414 1.414a1 1 0 00.707.293H15M6 4v16a2 2 0 002 2h8a2 2 0 002-2V4" />
+                    </svg>
+                    {loading ? '再開中...' : '投票を再開'}
+                  </>
+                )}
+              </button>
+            </div>
+            <div className="mt-4 p-3 bg-white rounded border">
+              <p className="text-sm text-gray-600">
+                <strong>💡 使い方:</strong> 全チームの発表が終了したら「投票を締め切る」ボタンを押してください。
+                投票が締め切られると、参加者は新しい投票ができなくなります。
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* 統計カード */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

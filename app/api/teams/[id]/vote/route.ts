@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Team, Vote } from '@/lib/models/Team';
+import VotingSettings from '@/lib/models/VotingSettings';
 
 export async function POST(
   request: NextRequest,
@@ -10,6 +11,32 @@ export async function POST(
   try {
     const { id } = await context.params;
     console.log('🗳️ 投票リクエスト受信 - チームID:', id);
+    
+    await dbConnect();
+    
+    // 🚨 投票締め切りチェック
+    console.log('🔍 投票設定確認中...');
+    const votingSettings = await VotingSettings.findOne();
+    
+    if (votingSettings && !votingSettings.isVotingOpen) {
+      console.log('❌ 投票締め切り済み');
+      const closedAt = votingSettings.closedAt;
+      const closedMessage = closedAt 
+        ? `投票は ${closedAt.toLocaleString('ja-JP')} に締め切られました。`
+        : '投票は締め切られました。';
+      
+      return NextResponse.json({
+        success: false,
+        error: 'VOTING_CLOSED',
+        message: `投票受付を終了しています。${closedMessage}`,
+        votingStatus: {
+          isOpen: false,
+          closedAt: closedAt
+        }
+      }, { status: 403 });
+    }
+    
+    console.log('✅ 投票受付中');
     
     const body = await request.json();
     const { reason, clientId } = body;
@@ -51,8 +78,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    await dbConnect();
     
     // IPアドレス取得
     const forwarded = request.headers.get('x-forwarded-for');
@@ -150,7 +175,10 @@ export async function POST(
     return NextResponse.json({
       success: true,
       data: updatedTeam,
-      message: `${team.name}に投票しました！`
+      message: `${team.name}に投票しました！`,
+      votingStatus: {
+        isOpen: true
+      }
     });
 
   } catch (error) {
