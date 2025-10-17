@@ -674,7 +674,7 @@ export default function TeamDetail({ params }: { params: Promise<{ id: string }>
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              message: `💖 投票しました！\n「${voteReason}」`,
+              message: `${voteReason}`,
               author: authorName
             })
           });
